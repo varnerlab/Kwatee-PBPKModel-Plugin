@@ -185,7 +185,20 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
             buffer.append(species_symbol);
             buffer.append("\" type=\"");
             buffer.append(rule_type);
-            buffer.append("\"/>\n");
+            buffer.append("\"");
+
+            // does this model contain a rule_compartemnt?
+            if (model.containsKey(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT)){
+
+                String rule_compartment = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT);
+
+                buffer.append(" compartment=\"");
+                buffer.append(rule_compartment);
+                buffer.append("\"");
+            }
+
+            // write closing line -
+            buffer.append("/>\n");
         }
 
         // return the buffer -
@@ -544,6 +557,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentConnectionParserDelegate";
         Vector<VLCGPBPKModelComponent> control_vector = _model_component_table.get(Class.forName(class_name_key));
         Iterator<VLCGPBPKModelComponent> control_iterator = control_vector.iterator();
+        int connection_index = 1;
         while (control_iterator.hasNext()) {
 
             // get the connection model -
@@ -552,42 +566,36 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
             // Get the source and target compartments -
             String source_compartment_symbol = (String) connection_model.getModelComponent(VLCGPBPKCompartmentConnectionModel.COMPARTMENT_CONNECTION_SOURCE);
             String target_compartment_symbol = (String) connection_model.getModelComponent(VLCGPBPKCompartmentConnectionModel.COMPARTMENT_CONNECTION_TARGET);
+            String connection_name = (String)connection_model.getModelComponent(VLCGPBPKCompartmentConnectionModel.COMPARTMENT_CONNECTION_NAME);
 
             // need to check .. do we have a reverse connection?
             String reverse_flag = (String)connection_model.getModelComponent(VLCGPBPKCompartmentConnectionModel.COMPARTMENT_CONNECTION_REVERSE);
 
             // write xml lines -
-            buffer.append("\t\t<connection cardiac_output_fraction=\"0.0\">\n");
-            buffer.append("\t\t\t<listOfSourceCompartments>\n");
-            buffer.append("\t\t\t\t<compartmentReference symbol=\"");
+            buffer.append("\t\t<connection index=\"");
+            buffer.append(connection_index++);
+            buffer.append("\" name=\"");
+            buffer.append(connection_name);
+            buffer.append("\" cardiac_output_fraction=\"0.0\" start_symbol=\"");
             buffer.append(source_compartment_symbol);
-            buffer.append("\" />\n");
-            buffer.append("\t\t\t</listOfSourceCompartments>\n");
-
-            buffer.append("\t\t\t<listOfTargetCompartments>\n");
-            buffer.append("\t\t\t\t<compartmentReference symbol=\"");
+            buffer.append("\" end_symbol=\"");
             buffer.append(target_compartment_symbol);
             buffer.append("\" />\n");
-            buffer.append("\t\t\t</listOfTargetCompartments>\n");
-            buffer.append("\t\t</connection>\n");
 
-            if (reverse_flag.equalsIgnoreCase("0") == false ||
-                    reverse_flag.equalsIgnoreCase("0.0") == false){
+            if (reverse_flag.equalsIgnoreCase("0") == false){
+
+                System.out.print("Reverse - "+reverse_flag+" connection_name="+connection_name+"\n");
 
                 // we have a reversible connection -
-                buffer.append("\t\t<connection cardiac_output_fraction=\"0.0\">\n");
-                buffer.append("\t\t\t<listOfSourceCompartments>\n");
-                buffer.append("\t\t\t\t<compartmentReference symbol=\"");
+                buffer.append("\t\t<connection index=\"");
+                buffer.append(connection_index++);
+                buffer.append("\" name=\"");
+                buffer.append(connection_name+"_reverse");
+                buffer.append("\" cardiac_output_fraction=\"0.0\" start_symbol=\"");
                 buffer.append(target_compartment_symbol);
-                buffer.append("\" />\n");
-                buffer.append("\t\t\t</listOfSourceCompartments>\n");
-
-                buffer.append("\t\t\t<listOfTargetCompartments>\n");
-                buffer.append("\t\t\t\t<compartmentReference symbol=\"");
+                buffer.append("\" end_symbol=\"");
                 buffer.append(source_compartment_symbol);
                 buffer.append("\" />\n");
-                buffer.append("\t\t\t</listOfTargetCompartments>\n");
-                buffer.append("\t\t</connection>\n");
             }
         }
 

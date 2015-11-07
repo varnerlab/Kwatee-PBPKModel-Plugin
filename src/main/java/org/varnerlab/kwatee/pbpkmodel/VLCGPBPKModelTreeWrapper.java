@@ -1,6 +1,7 @@
 package org.varnerlab.kwatee.pbpkmodel;
 
 import org.varnerlab.kwatee.pbpkmodel.model.VLCGPBPKBiochemistryControlModel;
+import org.varnerlab.kwatee.pbpkmodel.model.VLCGPBPKCompartmentConnectionModel;
 import org.varnerlab.kwatee.pbpkmodel.model.VLCGPBPKCompartmentModel;
 import org.varnerlab.kwatee.pbpkmodel.model.VLCGPBPKSpeciesModel;
 import org.w3c.dom.Document;
@@ -11,6 +12,7 @@ import org.w3c.dom.NodeList;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Vector;
 import java.util.concurrent.ExecutionException;
@@ -49,6 +51,7 @@ public class VLCGPBPKModelTreeWrapper {
     // cache some stuff so we don't do it twice -
     private ArrayList<VLCGPBPKSpeciesModel> _cached_species_list = new ArrayList<VLCGPBPKSpeciesModel>();
     private ArrayList<VLCGPBPKCompartmentModel> _cached_compartment_list = new ArrayList<VLCGPBPKCompartmentModel>();
+    private ArrayList<VLCGPBPKCompartmentConnectionModel> _cached_compartment_connection_list = new ArrayList<VLCGPBPKCompartmentConnectionModel>();
 
     public VLCGPBPKModelTreeWrapper(Document document) {
 
@@ -76,6 +79,55 @@ public class VLCGPBPKModelTreeWrapper {
         return number_of_control_terms;
     }
 
+    public int calculateTheTotalNumberOfReactionTerms() throws Exception {
+
+        // method variables -
+        int number_of_control_terms = 0;
+
+        String xpath_string = ".//reaction/@name";
+        NodeList nodeList = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        number_of_control_terms = nodeList.getLength();
+
+        // return -
+        return number_of_control_terms;
+    }
+
+    public String getStoichiometricCoefficientsForSpeciesInCompartment(String species_symbol,String compartment_symbol) throws Exception {
+
+        // Method variables -
+        StringBuilder row_buffer = new StringBuilder();
+
+        // how many *total* reactions do we have?
+        int number_of_reactions = this.calculateTheTotalNumberOfReactionTerms();
+
+        // Build a tmp array of zeros -
+        String[] tmp_array = new String[number_of_reactions];
+        for (int col_index = 0;col_index<number_of_reactions;col_index++){
+            tmp_array[col_index] = "0.0";
+        }
+        
+        // populate the row_buffer -
+        for (String element_value : tmp_array){
+            row_buffer.append(element_value);
+            row_buffer.append(" ");
+        }
+
+        // return stoichiometric matrix row
+        return row_buffer.toString();
+    }
+
+    public int findIndexOfConnectionBetweenStartAndEndCompartments(String start_compartment,String end_compartment) throws Exception {
+
+        // method variables -
+        int connection_index = -1;
+
+        String xpath_string = ".//connection[@start_symbol=\""+start_compartment+"\"][@end_symbol=\""+end_compartment+"\"]/@index";
+        connection_index = Integer.parseInt(_lookupPropertyValueFromTreeUsingXPath(xpath_string));
+
+        // return -
+        return connection_index;
+    }
+
     public int findIndexForReactionWithNameInCompartment(String reaction_name,String compartment_symbol) throws Exception {
 
         // Method variables -
@@ -100,6 +152,38 @@ public class VLCGPBPKModelTreeWrapper {
         return attributes.getNamedItem("symbol").getNodeValue();
     }
 
+
+    public Boolean isSpeciesWithSymbolSubjectToRuleWithName(String species_symbol,String rule_name) throws Exception {
+
+        // method variables -
+        Boolean species_is_subject_to_rule = false;
+
+        // Get rule type for this species?
+        String xpath_string = ".//speciesRule[@species=\""+species_symbol+"\"]/@type";
+        String ast_rule_name = _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+        if (ast_rule_name != null && ast_rule_name.equalsIgnoreCase(rule_name)){
+            species_is_subject_to_rule = true;
+        }
+
+        // return default -
+        return species_is_subject_to_rule;
+    }
+
+    public Boolean isSpeciesWithSymbolSubjectToRuleWithNameInCompartmentWithSymbol(String species_symbol,String rule_name,String compartment_symbol) throws Exception {
+
+        // method variables -
+        Boolean species_is_subject_to_rule = false;
+
+        // Get rule type for this species?
+        String xpath_string = ".//speciesRule[@species=\""+species_symbol+"\"][@compartment=\""+compartment_symbol+"\"]/@type";
+        String ast_rule_name = _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+        if (ast_rule_name != null && ast_rule_name.equalsIgnoreCase(rule_name)){
+            species_is_subject_to_rule = true;
+        }
+
+        // return default -
+        return species_is_subject_to_rule;
+    }
 
     public Boolean isThisASourceReaction(String reaction_name,String compartment_symbol) throws Exception {
 
@@ -289,6 +373,100 @@ public class VLCGPBPKModelTreeWrapper {
         return species_vector;
     }
 
+    public Boolean isThisASourceCompartmentConnection(String connection_name) throws Exception {
+
+        // Method variables -
+        Boolean is_this_a_source_connection = false;
+
+        // Setup xpath -
+        String xpath_string = ".//connection[@name=\""+connection_name+"\"]/edge/@start_symbol";
+        NodeList node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        int number_of_compartment_symbols = node_list.getLength();
+
+        for (int compartment_index = 0;compartment_index<number_of_compartment_symbols;compartment_index++){
+
+            // get the symbol -
+            String compartment_symbol = node_list.item(compartment_index).getNodeValue();
+            if (compartment_symbol.equalsIgnoreCase("[]")){
+                is_this_a_source_connection = true;
+                break;
+            }
+        }
+
+        // return -
+        return is_this_a_source_connection;
+    }
+
+    public ArrayList<String> getCompartmentConnectionNamesFromPBPKModelTree() throws Exception {
+
+        // Method variables -
+        ArrayList<String> local_connection_list = new ArrayList<String>();
+        NodeList connection_node_list = _lookupPropertyCollectionFromTreeUsingXPath(".//connection/@name");
+        int number_of_connections = connection_node_list.getLength();
+        for (int connection_index = 0;connection_index<number_of_connections;connection_index++){
+
+            // Get the connection node -
+            Node connection_node = connection_node_list.item(connection_index);
+
+            // Grab the name -
+            String connection_name = connection_node.getNodeValue();
+            local_connection_list.add(connection_name);
+        }
+
+        // return -
+        return local_connection_list;
+    }
+
+    public ArrayList<String> getListOfCompartmentsDownstreamOfCompartmentWithSymbol(String start_compartment_symbol) throws Exception {
+
+        // method variables -
+        ArrayList<String> compartment_name_array = new ArrayList<String>();
+
+        // find all comparment names that are connected -
+        String xpath_string = ".//connection[@start_symbol=\""+start_compartment_symbol+"\"]/@end_symbol";
+        NodeList compartment_node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        int number_of_compartments = compartment_node_list.getLength();
+        for (int compartment_index = 0;compartment_index<number_of_compartments;compartment_index++) {
+
+            // get the compartment node -
+            Node compartment_node = compartment_node_list.item(compartment_index);
+
+            // Get connected name -
+            String connected_compartment_symbol = compartment_node.getNodeValue();
+
+            // add the connected name to the tmp name vector (we need this later)
+            compartment_name_array.add(connected_compartment_symbol);
+        }
+
+        // return -
+        return compartment_name_array;
+    }
+
+    public ArrayList<String> getListOfCompartmentsUpstreamOfCompartmentWithSymbol(String start_compartment_symbol) throws Exception {
+
+        // method variables -
+        ArrayList<String> compartment_name_array = new ArrayList<String>();
+
+        // find all comparment names that are connected -
+        String xpath_string = ".//connection[@end_symbol=\""+start_compartment_symbol+"\"]/@start_symbol";
+        NodeList compartment_node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        int number_of_compartments = compartment_node_list.getLength();
+        for (int compartment_index = 0;compartment_index<number_of_compartments;compartment_index++) {
+
+            // get the compartment node -
+            Node compartment_node = compartment_node_list.item(compartment_index);
+
+            // Get connected name -
+            String connected_compartment_symbol = compartment_node.getNodeValue();
+
+            // add the connected name to the tmp name vector (we need this later)
+            compartment_name_array.add(connected_compartment_symbol);
+        }
+
+        // return -
+        return compartment_name_array;
+    }
+
     public ArrayList<VLCGPBPKCompartmentModel> getCompartmentModelsFromPBPKModelTree() throws Exception {
 
         // do we have a compartment list already? => yes, return the cached list
@@ -450,11 +628,14 @@ public class VLCGPBPKModelTreeWrapper {
         }
 
         // Method attributes -
-        String property_string = "";
+        String property_string = null;
 
         try {
             Node propNode = (Node) _xpath.evaluate(xpath_string, _model_tree, XPathConstants.NODE);
-            property_string = propNode.getNodeValue();
+            if (propNode != null){
+
+                property_string = propNode.getNodeValue();
+            }
         }
         catch (Exception error)
         {

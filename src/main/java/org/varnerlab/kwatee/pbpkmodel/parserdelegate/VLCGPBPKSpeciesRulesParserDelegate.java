@@ -62,8 +62,14 @@ public class VLCGPBPKSpeciesRulesParserDelegate implements VLCGParserHandlerDele
             else if (counter == 2){
 
                 // remove the ;
-                String strTmp = token.substring(0, token.length() - 1);
+                String strTmp = _removeSemicolonFromField(token);
                 _model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_TYPE,strTmp);
+            }
+            else if (counter == 3){
+
+                // remove the ;
+                String strTmp = _removeSemicolonFromField(token);
+                _model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT,strTmp);
             }
             else {
                 throw new Exception("The parseLine(...) method of "+this.getClass().toString() + " does not support more than "+(counter - 1)+" tokens. Check: "+line);
@@ -74,5 +80,16 @@ public class VLCGPBPKSpeciesRulesParserDelegate implements VLCGParserHandlerDele
         }
 
         return _model;
+    }
+
+    public String _removeSemicolonFromField(String field) throws Exception {
+
+        if (field.contains(";") && field.indexOf(';') == field.length() - 1){
+            return field.substring(0, field.length() - 1);
+        }
+        else {
+            return field;
+        }
+
     }
 }

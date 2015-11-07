@@ -35,11 +35,25 @@ public class VLCGPBPKSpeciesModel implements VLCGPBPKModelComponent {
     public static final String SPECIES_SYMBOL = "species_symbol";
     public static final String SPECIES_COEFFICIENT = "species_coefficient";
     public static final String SPECIES_COMPARTMENT = "species_compartment";
-    public static final String SPECIES_RULE_TYPE = "is_species_stationary";
+    public static final String SPECIES_RULE_TYPE = "species_rule_type";
+    public static final String SPECIES_RULE_COMPARTMENT = "SPECIES_RULE_COMPARTMENT";
     public static final String SPECIES_SPECIES_TYPE = "species_type";
     public static final String SPECIES_INITIAL_CONDITION = "species_initial_condition";
 
     public static final String RAW_RECORD = "raw_record";
+
+    public Boolean containsKey(String key) throws Exception {
+
+        // method variables -
+        Boolean table_contains_key = false;
+
+        if (_reaction_component_table.containsKey(key)) {
+            table_contains_key = true;
+        }
+
+        // return default -
+        return table_contains_key;
+    }
 
     @Override
     public Object getModelComponent(String key) throws Exception {

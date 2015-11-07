@@ -41,11 +41,307 @@ public class VLCGJuliaPBPKModelDelegate {
     private java.util.Date today = Calendar.getInstance().getTime();
     private SimpleDateFormat date_formatter = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
 
+    private String _generateSpeciesAliasListForModelTree(VLCGPBPKModelTreeWrapper model_tree) throws Exception {
+
+        StringBuilder buffer = new StringBuilder();
+
+        // write out the species list -
+        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+        int species_index = 1;
+        for (VLCGPBPKSpeciesModel species_model : species_model_array){
+
+            // Get data from the model -
+            String symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+            String compartment_name = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+            String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+
+            if (species_type.equalsIgnoreCase("biochemical") == true){
+
+                // write the line -
+                buffer.append(symbol);
+                buffer.append("_");
+                buffer.append(compartment_name);
+                buffer.append(" = ");
+                buffer.append("x[");
+                buffer.append(species_index);
+                buffer.append("];\n");
+
+            }
+            else {
+
+                // write the line -
+                buffer.append(symbol);
+                buffer.append(" = ");
+                buffer.append("x[");
+                buffer.append(species_index);
+                buffer.append("];\n");
+            }
+
+            // update the species index -
+            species_index++;
+        }
+
+        return buffer.toString();
+    }
+
+
+    public String buildStoichiometricMatrixBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // stoichiometric matrix is NSPECIES x NREACTIONS big -
+        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+        for (VLCGPBPKSpeciesModel species_model : species_model_array){
+
+            // Get species symbol, and home compartment -
+            String species_symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+            String home_compartment_symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+            String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+            if (species_type.equalsIgnoreCase("volume") == false){
+
+                // ok, we have a biochemical species -
+                String row_string = model_tree.getStoichiometricCoefficientsForSpeciesInCompartment(species_symbol,home_compartment_symbol);
+                buffer.append(row_string);
+                buffer.append("\n");
+            }
+        }
+
+        return buffer.toString();
+    }
+
+    public String buildCompartmentConnectivityMatrixBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+
+
+        return buffer.toString();
+    }
+
+    public String buildCompartmentFlowFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // Get the control function name -
+        String flow_function_name = property_tree.lookupKwateeCompartmentFlowFunctionName();
+
+        // Copyright notice -
+        String copyright = copyrightFactory.getJuliaCopyrightHeader();
+        buffer.append(copyright);
+
+        // Fill in the buffer -
+        buffer.append("function ");
+        buffer.append(flow_function_name);
+        buffer.append("(t,x,data_dictionary)\n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("# ");
+        buffer.append(flow_function_name);
+        buffer.append(".jl was generated using the Kwatee code generation system.\n");
+        buffer.append("# Username: ");
+        buffer.append(property_tree.lookupKwateeModelUsername());
+        buffer.append("\n");
+        buffer.append("# Type: ");
+        buffer.append(property_tree.lookupKwateeModelType());
+        buffer.append("\n");
+        buffer.append("# Version: ");
+        buffer.append(property_tree.lookupKwateeModelVersion());
+        buffer.append("\n");
+        buffer.append("# Generation timestamp: ");
+        buffer.append(date_formatter.format(today));
+        buffer.append("\n");
+        buffer.append("# \n");
+        buffer.append("# Arguments: \n");
+        buffer.append("# t  - current time \n");
+        buffer.append("# x  - state vector \n");
+        buffer.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("\n");
+
+        // Alias the species vector -
+        buffer.append("# Alias the species vector - \n");
+        buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
+        buffer.append("\n");
+
+        // Get some stuff we'll need from the data dictonary -
+        buffer.append("# Get data we need from the data_dictionary - \n");
+        buffer.append("BPM = data_dictionary[\"BEATS_PER_MINUTE\"];\n");
+        buffer.append("stroke_volume = data_dictionary[\"STROKE_VOLUME\"];\n");
+        buffer.append("flow_parameter_array = data_dictionary[\"CARDIAC_FLOW_PARAMETERS\"];\n");
+        buffer.append("\n");
+
+        // calculate the q-vector -
+        buffer.append("# Calculate the q_vector - \n");
+        buffer.append("q_vector = Float64[];\n");
+        buffer.append("cardiac_output = BPM*stroke_volume;\n");
+        buffer.append("\n");
+
+        // Get list of names -
+        ArrayList<String> connection_name_list = model_tree.getCompartmentConnectionNamesFromPBPKModelTree();
+        int connection_index = 1;
+        for (String connection_name : connection_name_list){
+
+
+            // ok, write the record -
+            buffer.append("# ");
+            buffer.append(connection_index);
+            buffer.append(" ");
+            buffer.append(connection_name);
+            buffer.append("\n");
+
+            if (model_tree.isThisASourceCompartmentConnection(connection_name) == true){
+
+                buffer.append("tmp_flow_rate = flow_parameter_array[");
+                buffer.append(connection_index);
+                buffer.append("];\n");
+                buffer.append("push!(q_vector,tmp_flow_rate);\n");
+                buffer.append("\n");
+            }
+            else {
+
+                buffer.append("tmp_flow_rate = cardiac_output*");
+                buffer.append("flow_parameter_array[");
+                buffer.append(connection_index);
+                buffer.append("];\n");
+                buffer.append("push!(q_vector,tmp_flow_rate);\n");
+                buffer.append("\n");
+            }
+
+            // update the index -
+            connection_index++;
+        }
+
+        // calculate the q-vector -
+        buffer.append("# Calculate the species_flow_terms - \n");
+        buffer.append("species_flow_vector = Float64[];\n");
+        buffer.append("\n");
+
+        // Get list of species models -
+        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+        for (VLCGPBPKSpeciesModel species_model : species_model_array){
+
+            String species_symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+
+            // ok, we the species -
+            String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+            if (species_type.equalsIgnoreCase("volume") == false){
+
+                String home_compartment_symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+
+                // ok, we have a biochemical species -
+                buffer.append("# ");
+                buffer.append(species_symbol);
+                buffer.append("_");
+                buffer.append(home_compartment_symbol);
+                buffer.append(" ---------- \n");
+
+                // if we have a *no-fly* species, then just put a zero for this flow -
+                if (model_tree.isSpeciesWithSymbolSubjectToRuleWithName(species_symbol,"fixed")){
+
+                    // ooops!! we have a no-fly species ...
+                    buffer.append("push!(species_flow_vector,0.0);\n");
+                    buffer.append("\n");
+                }
+                else {
+
+                    // What compartment is this species in?
+                    buffer.append("tmp_flow_term = -(");
+
+                    // What comparments are *downstream* of this compartment?
+                    ArrayList<String> downstream_compartment_symbol_array = model_tree.getListOfCompartmentsDownstreamOfCompartmentWithSymbol(home_compartment_symbol);
+
+                    // Iterate through the connections -
+                    int number_of_downstream_connections = downstream_compartment_symbol_array.size();
+                    int downstream_connection_counter = 0;
+                    for (String downstream_compartment : downstream_compartment_symbol_array){
+
+                        // lookup the index of the flow -
+                        int flow_index = model_tree.findIndexOfConnectionBetweenStartAndEndCompartments(home_compartment_symbol,downstream_compartment);
+
+                        // write the line -
+                        buffer.append("q_vector[");
+                        buffer.append(flow_index);
+                        buffer.append("]");
+
+
+                        if (downstream_connection_counter<number_of_downstream_connections-1){
+                            buffer.append("+");
+                        }
+
+                        // update -
+                        downstream_connection_counter++;
+                    }
+
+                    buffer.append(")*");
+                    buffer.append(species_symbol);
+                    buffer.append("_");
+                    buffer.append(home_compartment_symbol);
+
+                    // ok, we are down w/the outflows .. no process the inflow -
+                    ArrayList<String> upstream_compartment_symbol_array = model_tree.getListOfCompartmentsUpstreamOfCompartmentWithSymbol(home_compartment_symbol);
+                    // Iterate through the connections -
+                    int number_of_upstream_connections = upstream_compartment_symbol_array.size();
+                    int upstream_connection_counter = 0;
+
+                    if (number_of_upstream_connections>0){
+                        buffer.append("+(");
+                    }
+
+                    for (String upstream_compartment : upstream_compartment_symbol_array){
+
+                        // lookup the index of the flow -
+                        int flow_index = model_tree.findIndexOfConnectionBetweenStartAndEndCompartments(upstream_compartment,home_compartment_symbol);
+                        buffer.append("q_vector[");
+                        buffer.append(flow_index);
+                        buffer.append("]*");
+
+                        // ok, if we have an upstream component that is [] -> we have a souce term
+                        if (upstream_compartment.equalsIgnoreCase("[]")){
+
+                            // ok, generate an input species by default -
+                            String special_symbol = species_symbol+"_input_"+home_compartment_symbol;
+                            buffer.append(special_symbol);
+                        }
+                        else {
+
+                            // write the line -
+                            buffer.append(species_symbol);
+                            buffer.append("_");
+                            buffer.append(upstream_compartment);
+                        }
+
+                        if (upstream_connection_counter<number_of_upstream_connections-1){
+                            buffer.append("+");
+                        }
+
+                        // update -
+                        upstream_connection_counter++;
+                    }
+
+                    // ok, we are done with the inflows .. write the endline -
+                    buffer.append(");\n");
+                    buffer.append("push!(species_flow_vector,tmp_flow_term);\n");
+                    buffer.append("tmp_flow_term = 0;\n");
+                    buffer.append("\n");
+                }
+            }
+        }
+
+        // write the return statement -
+        buffer.append("return (species_flow_vector,q_vector);\n");
+        buffer.append("end;\n");
+
+        // return -
+        return buffer.toString();
+    }
+
 
     public String buildBalanceFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
 
         // Method variables -
-        StringBuffer massbalances = new StringBuffer();
+        StringBuilder massbalances = new StringBuilder();
 
         // Get the balance function name -
         String balance_function_name = property_tree.lookupKwateeBalanceFunctionName();
@@ -60,6 +356,12 @@ public class VLCGJuliaPBPKModelDelegate {
         String control_function_name = property_tree.lookupKwateeControlFunctionName();
         massbalances.append("include(\"");
         massbalances.append(control_function_name);
+        massbalances.append(".jl\");\n");
+
+        // Get/Set the flow function import -
+        String flow_function_name = property_tree.lookupKwateeCompartmentFlowFunctionName();
+        massbalances.append("include(\"");
+        massbalances.append(flow_function_name);
         massbalances.append(".jl\");\n");
         massbalances.append("\n");
 
@@ -95,6 +397,12 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
         massbalances.append("# ---------------------------------------------------------------------- #\n");
         massbalances.append("\n");
+        massbalances.append("# Get data from the data_dictionary - \n");
+        massbalances.append("S = data_dictionary[\"STOICHIOMETRIC_MATRIX\"];\n");
+        massbalances.append("C = data_dictionary[\"FLOW_CONNECTIVITY_MATRIX\"];\n");
+        massbalances.append("tau_array = data_dictionary[\"TIME_CONSTANT_ARRAY\"];\n");
+        massbalances.append("\n");
+
         massbalances.append("# Correct nagative x's = throws errors in control even if small - \n");
         massbalances.append("idx = find(x->(x<0),x);\n");
         massbalances.append("x[idx] = 0.0;\n");
@@ -104,11 +412,19 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append(kinetics_function_name);
         massbalances.append("(t,x,data_dictionary);\n");
 
+        // call the control function -
         massbalances.append("\n");
         massbalances.append("# Call the control function - \n");
         massbalances.append("(rate_vector) = ");
         massbalances.append(control_function_name);
         massbalances.append("(t,x,rate_vector,data_dictionary);\n");
+
+        // Call the flow function -
+        massbalances.append("\n");
+        massbalances.append("# Call the flow function - \n");
+        massbalances.append("(flow_terms_vector,q_vector) = ");
+        massbalances.append(flow_function_name);
+        massbalances.append("(t,x,data_dictionary);\n");
         massbalances.append("\n");
 
         // check - is this model large scale optimized?
@@ -120,17 +436,20 @@ public class VLCGJuliaPBPKModelDelegate {
         else {
 
             // balance are encoded as matrix vector product -
-            massbalances.append("# Encode the balance equations as a matrix vector product - \n");
-            massbalances.append("maximum_specific_growth_rate = data_dictionary[\"MAXIMUM_SPECIFIC_GROWTH_RATE\"];\n");
-            massbalances.append("S = data_dictionary[\"STOICHIOMETRIC_MATRIX\"];\n");
-            massbalances.append("dilution_selection_matrix = data_dictionary[\"DILUTION_SELECTION_MATRIX\"];\n");
-            massbalances.append("tau_array = data_dictionary[\"TIME_CONSTANT_ARRAY\"];\n");
-            massbalances.append("tmp_vector = S*rate_vector;\n");
+            massbalances.append("# Encode the biochemical balance equations as a matrix vector product - \n");
+            massbalances.append("tmp_vector = flow_terms_vector + S*rate_vector;\n");
             massbalances.append("number_of_states = length(tmp_vector);\n");
             massbalances.append("for state_index in [1:number_of_states]\n");
-            massbalances.append("\tdxdt_vector[state_index] = tmp_vector[state_index] - maximum_specific_growth_rate*(dilution_selection_matrix[state_index,state_index])*(x[state_index]);\n");
-            massbalances.append("\tdxdt_vector[state_index] = tau_array[state_index]*dxdt_vector[state_index];\n");
-            massbalances.append("end");
+            massbalances.append("\tdxdt_vector[state_index] = tau_array[state_index]*tmp_vector[state_index];\n");
+            massbalances.append("end\n");
+            massbalances.append("\n");
+            massbalances.append("# Encode the volume balance equations as a matrix vector product - \n");
+            massbalances.append("tmp_dvdt_vector = C*q_vector;\n");
+            massbalances.append("number_of_compartments = length(tmp_dvdt_vector);\n");
+            massbalances.append("for compartment_index in [1:number_of_compartments]\n");
+            massbalances.append("\tstate_vector_index = (number_of_states)+compartment_index;\n");
+            massbalances.append("\tdxdt_vector[state_vector_index] = tmp_dvdt_vector[compartment_index];\n");
+            massbalances.append("end\n");
             massbalances.append("\n");
         }
 
@@ -191,29 +510,7 @@ public class VLCGJuliaPBPKModelDelegate {
 
         // Alias the species vector -
         buffer.append("# Alias the species vector - \n");
-
-        // write out the species list -
-        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
-        int species_index = 1;
-        for (VLCGPBPKSpeciesModel species_model : species_model_array){
-
-            // Get data from the model -
-            String symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
-            String compartment_name = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
-
-            // write the line -
-            buffer.append(symbol);
-            buffer.append("_");
-            buffer.append(compartment_name);
-            buffer.append(" = ");
-            buffer.append("x[");
-            buffer.append(species_index);
-            buffer.append("];\n");
-
-            // update the species index -
-            species_index++;
-        }
-
+        buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
         buffer.append("\n");
         buffer.append("# ----------------------------------------------------------------------------------- #\n");
 
@@ -358,28 +655,8 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# --------------------------------------------------------------------- #\n");
         buffer.append("# \n");
         buffer.append("# Alias the species vector - \n");
-
-        // write out the species list -
-        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
-        int species_index = 1;
-        for (VLCGPBPKSpeciesModel species_model : species_model_array){
-
-            // Get data from the model -
-            String symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
-            String compartment_name = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
-
-            // write the line -
-            buffer.append(symbol);
-            buffer.append("_");
-            buffer.append(compartment_name);
-            buffer.append(" = ");
-            buffer.append("x[");
-            buffer.append(species_index);
-            buffer.append("];\n");
-
-            // update the species index -
-            species_index++;
-        }
+        buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
+        buffer.append("\n");
 
         // Write out the kinetics vector -
         buffer.append("\n");
@@ -467,7 +744,9 @@ public class VLCGJuliaPBPKModelDelegate {
                 }
 
                 // write the push
-                buffer.append("push!(rate_vector,tmp_reaction);\n");
+                buffer.append("push!(rate_vector,tmp_reaction*V_");
+                buffer.append(compartment_symbol);
+                buffer.append(");\n");
                 buffer.append("tmp_reaction = 0;\n");
                 buffer.append("\n");
 
