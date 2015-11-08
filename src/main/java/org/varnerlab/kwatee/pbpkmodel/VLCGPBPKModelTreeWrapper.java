@@ -504,7 +504,7 @@ public class VLCGPBPKModelTreeWrapper {
         Boolean is_this_a_source_connection = false;
 
         // Setup xpath -
-        String xpath_string = ".//connection[@name=\""+connection_name+"\"]/edge/@start_symbol";
+        String xpath_string = ".//connection[@name=\""+connection_name+"\"]/@start_symbol";
         NodeList node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
         int number_of_compartment_symbols = node_list.getLength();
 
@@ -520,6 +520,30 @@ public class VLCGPBPKModelTreeWrapper {
 
         // return -
         return is_this_a_source_connection;
+    }
+
+
+    public String getParameterValueFromCompartmentConnectionWithName(String compartment_connection) throws Exception {
+
+        // Xpath -
+        String xpath_string = ".//connection[@name=\""+compartment_connection+"\"]/@parameter_value";
+        return _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+    }
+
+    public String generateCommentForConnectionParameterForCompartmentConnectionWithName(String compartment_connection) throws Exception {
+
+        // Xpath -
+        // Start -
+        String xpath_string = ".//connection[@name=\""+compartment_connection+"\"]/@start_symbol";
+        String start_symbol = _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+
+        // End -
+        String end_xpath_string = ".//connection[@name=\""+compartment_connection+"\"]/@end_symbol";
+        String end_symbol = _lookupPropertyValueFromTreeUsingXPath(end_xpath_string);
+
+        // Formulate the line -
+        String comment = compartment_connection+": "+start_symbol+" -> "+end_symbol+"\n";
+        return comment;
     }
 
     public ArrayList<String> getCompartmentConnectionNamesFromPBPKModelTree() throws Exception {

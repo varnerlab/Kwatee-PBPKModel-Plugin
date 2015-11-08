@@ -576,7 +576,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
             buffer.append(connection_index++);
             buffer.append("\" name=\"");
             buffer.append(connection_name);
-            buffer.append("\" cardiac_output_fraction=\"0.0\" start_symbol=\"");
+            buffer.append("\" parameter_value=\"0.0\" start_symbol=\"");
             buffer.append(source_compartment_symbol);
             buffer.append("\" end_symbol=\"");
             buffer.append(target_compartment_symbol);
@@ -591,7 +591,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 buffer.append(connection_index++);
                 buffer.append("\" name=\"");
                 buffer.append(connection_name+"_reverse");
-                buffer.append("\" cardiac_output_fraction=\"0.0\" start_symbol=\"");
+                buffer.append("\" parameter_value=\"0.0\" start_symbol=\"");
                 buffer.append(target_compartment_symbol);
                 buffer.append("\" end_symbol=\"");
                 buffer.append(source_compartment_symbol);
