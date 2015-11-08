@@ -93,6 +93,78 @@ public class VLCGPBPKModelTreeWrapper {
         return number_of_control_terms;
     }
 
+    public int calculateTheTotalNumberOfFlowConnections() throws Exception {
+
+        // method variables -
+        int number_of_connections = 0;
+
+        String xpath_string = ".//connection/@name";
+        NodeList nodeList = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        number_of_connections = nodeList.getLength();
+
+        // return -
+        return number_of_connections;
+    }
+
+    public String getConnectionsForCompartmentWithSymbol(String compartment_symbol) throws Exception {
+
+        // Method variables -
+        StringBuilder row_buffer = new StringBuilder();
+
+        // how many connections do we have?
+        int number_of_connections = this.calculateTheTotalNumberOfFlowConnections();
+
+        // Build a tmp array of zeros -
+        String[] tmp_array = new String[number_of_connections];
+        for (int col_index = 0;col_index<number_of_connections;col_index++){
+            tmp_array[col_index] = "0.0";
+        }
+
+        // Get *outbound* edges -
+        String outbound_xpath = ".//connection[@start_symbol=\""+compartment_symbol+"\"]/@index";
+        NodeList outbound_node_list = _lookupPropertyCollectionFromTreeUsingXPath(outbound_xpath);
+        int number_of_outbound_nodes = outbound_node_list.getLength();
+        for (int outbound_index = 0;outbound_index<number_of_outbound_nodes;outbound_index++){
+
+            // Get outbound index -
+            String index = outbound_node_list.item(outbound_index).getNodeValue();
+
+            // update the tmp_array -
+            tmp_array[Integer.parseInt(index) - 1] = "-1.0";
+        }
+
+        // Get *inbound* edges -
+        String inbound_xpath = ".//connection[@end_symbol=\""+compartment_symbol+"\"]/@index";
+        NodeList inbound_node_list = _lookupPropertyCollectionFromTreeUsingXPath(inbound_xpath);
+        int number_of_inbound_nodes = inbound_node_list.getLength();
+        for (int inbound_index = 0;inbound_index<number_of_inbound_nodes;inbound_index++){
+
+            // Get outbound index -
+            String index = inbound_node_list.item(inbound_index).getNodeValue();
+
+            // update the tmp_array -
+            tmp_array[Integer.parseInt(index) - 1] = "1.0";
+        }
+
+        // populate the row_buffer -
+        int col_index = 0;
+        for (String element_value : tmp_array){
+            row_buffer.append(element_value);
+
+            if (col_index<number_of_connections - 1){
+                row_buffer.append(" ");
+            }
+
+            col_index++;
+        }
+
+        // add a new-line -
+        row_buffer.append("\n");
+
+        // return stoichiometric matrix row
+        return row_buffer.toString();
+    }
+
     public String getStoichiometricCoefficientsForSpeciesInCompartment(String species_symbol,String compartment_symbol) throws Exception {
 
         // Method variables -

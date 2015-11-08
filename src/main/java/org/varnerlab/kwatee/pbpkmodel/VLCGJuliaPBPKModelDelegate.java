@@ -115,6 +115,17 @@ public class VLCGJuliaPBPKModelDelegate {
         StringBuilder buffer = new StringBuilder();
 
 
+        // get the compartment model array -
+        ArrayList<VLCGPBPKCompartmentModel> compartment_model_array = model_tree.getCompartmentModelsFromPBPKModelTree();
+        for (VLCGPBPKCompartmentModel compartment_model : compartment_model_array){
+
+            // Get the compartment symbol -
+            String compartment_symbol = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
+
+            // Build the row -
+            String row_string = model_tree.getConnectionsForCompartmentWithSymbol(compartment_symbol);
+            buffer.append(row_string);
+        }
 
         return buffer.toString();
     }
@@ -817,6 +828,15 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append(fully_qualified_stoichiometric_matrix_path);
         buffer.append("\"));\n");
         buffer.append("(NSPECIES,NREACTIONS) = size(S);\n");
+        buffer.append("\n");
+
+        // Get/load the connectivity matrix -
+        buffer.append("# Load the stoichiometric matrix - \n");
+        String fully_qualified_connectivity_matrix_path = property_tree.lookupKwateeCompartmentConnectivityMatrixFilePath();
+        buffer.append("C = float(open(readdlm,");
+        buffer.append("\"");
+        buffer.append(fully_qualified_connectivity_matrix_path);
+        buffer.append("\"));\n");
 
         // build the initial_condition_array -
         buffer.append("\n");
@@ -1044,12 +1064,12 @@ public class VLCGJuliaPBPKModelDelegate {
             }
         }
 
-
-
+        
         buffer.append("\n");
         buffer.append("# ---------------------------- DO NOT EDIT BELOW THIS LINE --------------------------------------- #\n");
         buffer.append("data_dictionary = Dict();\n");
         buffer.append("data_dictionary[\"STOICHIOMETRIC_MATRIX\"] = S;\n");
+        buffer.append("data_dictionary[\"FLOW_CONNECTIVITY_MATRIX\"] = C;\n");
         buffer.append("data_dictionary[\"RATE_CONSTANT_ARRAY\"] = rate_constant_array;\n");
         buffer.append("data_dictionary[\"SATURATION_CONSTANT_ARRAY\"] = saturation_constant_array;\n");
         buffer.append("data_dictionary[\"INITIAL_CONDITION_ARRAY\"] = initial_condition_array;\n");
