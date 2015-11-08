@@ -103,7 +103,6 @@ public class VLCGJuliaPBPKModelDelegate {
                 // ok, we have a biochemical species -
                 String row_string = model_tree.getStoichiometricCoefficientsForSpeciesInCompartment(species_symbol,home_compartment_symbol);
                 buffer.append(row_string);
-                buffer.append("\n");
             }
         }
 

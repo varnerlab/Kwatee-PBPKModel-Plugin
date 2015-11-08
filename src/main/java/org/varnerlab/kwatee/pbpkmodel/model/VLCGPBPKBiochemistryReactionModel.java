@@ -124,7 +124,7 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
                             symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT,dataCoeff);
                         }
                         else {
-                            symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT, "-" + dataCoeff);
+                            symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT, dataCoeff);
                         }
 
                         // Update the counter
@@ -145,7 +145,7 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
                 else {
                     // If this metabolite is in a reactant string, then coeff is negative
                     symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL,(String)dataChunk);
-                    symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT,"-1.0");
+                    symbol.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT,"1.0");
                 }
             }
 

@@ -9,6 +9,7 @@ import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
+import javax.xml.crypto.NodeSetData;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
@@ -105,12 +106,64 @@ public class VLCGPBPKModelTreeWrapper {
         for (int col_index = 0;col_index<number_of_reactions;col_index++){
             tmp_array[col_index] = "0.0";
         }
-        
+
+        // ok, we need to get the stoichiometric coefficient for reactions having species_symbol in compartment as a reactant -
+        String reaction_name_xpath = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction/listOfReactants/speciesReference[@species=\""+species_symbol+"\"]/../../@name";
+        NodeList reaction_name_list = _lookupPropertyCollectionFromTreeUsingXPath(reaction_name_xpath);
+        int number_of_local_reactions = reaction_name_list.getLength();
+        for (int local_reaction_index = 0;local_reaction_index<number_of_local_reactions;local_reaction_index++){
+
+            // Get name value -
+            String local_reaction_name = reaction_name_list.item(local_reaction_index).getNodeValue();
+
+            // Get the reaction index -
+            String xpath_reaction_index = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction[@name=\""+local_reaction_name+"\"]/@index";
+            String reaction_index = _lookupPropertyValueFromTreeUsingXPath(xpath_reaction_index);
+
+            // Get stoichiometric coefficient -
+            String xpath_stochiometric_coefficient = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction[@name=\""+local_reaction_name+"\"]/listOfReactants/speciesReference[@species=\""+species_symbol+"\"]/@stoichiometry";
+            String stochiometric_coefficient = _lookupPropertyValueFromTreeUsingXPath(xpath_stochiometric_coefficient);
+
+            // update the tmp_array -
+            tmp_array[Integer.parseInt(reaction_index) - 1] = "-"+stochiometric_coefficient;
+        }
+
+        // Process the products -
+        String product_name_xpath = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction/listOfProducts/speciesReference[@species=\""+species_symbol+"\"]/../../@name";
+        NodeList product_reaction_name_list = _lookupPropertyCollectionFromTreeUsingXPath(product_name_xpath);
+        number_of_local_reactions = product_reaction_name_list.getLength();
+        for (int local_reaction_index = 0;local_reaction_index<number_of_local_reactions;local_reaction_index++){
+
+            // Get name value -
+            String local_reaction_name = product_reaction_name_list.item(local_reaction_index).getNodeValue();
+
+            // Get the reaction index -
+            String xpath_reaction_index = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction[@name=\""+local_reaction_name+"\"]/@index";
+            String reaction_index = _lookupPropertyValueFromTreeUsingXPath(xpath_reaction_index);
+
+            // Get stoichiometric coefficient -
+            String xpath_stochiometric_coefficient = ".//listOfReactions/location[@compartment=\""+compartment_symbol+"\"]/reaction[@name=\""+local_reaction_name+"\"]/listOfProducts/speciesReference[@species=\""+species_symbol+"\"]/@stoichiometry";
+            String stochiometric_coefficient = _lookupPropertyValueFromTreeUsingXPath(xpath_stochiometric_coefficient);
+
+            // update the tmp_array -
+            tmp_array[Integer.parseInt(reaction_index) - 1] = stochiometric_coefficient;
+        }
+
+
         // populate the row_buffer -
+        int col_index = 0;
         for (String element_value : tmp_array){
             row_buffer.append(element_value);
-            row_buffer.append(" ");
+
+            if (col_index<number_of_reactions - 1){
+                row_buffer.append(" ");
+            }
+
+            col_index++;
         }
+
+        // add a new-line -
+        row_buffer.append("\n");
 
         // return stoichiometric matrix row
         return row_buffer.toString();
