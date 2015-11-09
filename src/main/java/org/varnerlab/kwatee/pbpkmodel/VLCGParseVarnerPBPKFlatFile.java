@@ -635,6 +635,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         }
 
         Iterator compartment_iterator = _compartment_model_vector.iterator();
+        int compartment_index = 1;
         while (compartment_iterator.hasNext()) {
 
             // get the current symbol -
@@ -642,7 +643,9 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
             String current_symbol = (String) compartment_current.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
 
             // ok write the xml records -
-            buffer.append("\t\t<compartment symbol=\"");
+            buffer.append("\t\t<compartment index=\"");
+            buffer.append(compartment_index++);
+            buffer.append("\" symbol=\"");
             buffer.append(current_symbol);
             buffer.append("\" initial_volume=\"");
             buffer.append("1.0\"/>\n");

@@ -80,6 +80,23 @@ public class VLCGPBPKModelTreeWrapper {
         return number_of_control_terms;
     }
 
+    public int calculateTheNumberOfBiochemicalSpecies() throws Exception {
+
+        // method variables -
+        int number_of_biochemical_species = 0;
+
+        String species_xpath = ".//species/@symbol";
+        NodeList species_node_list = _lookupPropertyCollectionFromTreeUsingXPath(species_xpath);
+
+        String compartment_xpath = ".//compartment/@symbol";
+        NodeList compartment_node_list = _lookupPropertyCollectionFromTreeUsingXPath(compartment_xpath);
+
+        number_of_biochemical_species = species_node_list.getLength()*compartment_node_list.getLength();
+
+        // return -
+        return number_of_biochemical_species;
+    }
+
     public int calculateTheTotalNumberOfReactionTerms() throws Exception {
 
         // method variables -
@@ -239,6 +256,21 @@ public class VLCGPBPKModelTreeWrapper {
 
         // return stoichiometric matrix row
         return row_buffer.toString();
+    }
+
+    public int findIndexOfCompartmentWithSymbol(String compartment_symbol) throws Exception {
+
+        // method variables -
+        int compartment_index = -1;
+
+        // xpath -
+        String xpath_string = ".//compartment[@symbol=\""+compartment_symbol+"\"]/@index";
+        String index = _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+
+        compartment_index = Integer.parseInt(index);
+
+        // return
+        return compartment_index;
     }
 
     public int findIndexOfConnectionBetweenStartAndEndCompartments(String start_compartment,String end_compartment) throws Exception {

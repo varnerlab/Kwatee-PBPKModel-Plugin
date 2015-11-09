@@ -84,6 +84,47 @@ public class VLCGJuliaPBPKModelDelegate {
         return buffer.toString();
     }
 
+    public String _generateSpeciesVolumeListForModelTree(VLCGPBPKModelTreeWrapper model_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // Get species list -
+        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+
+        // declare volume compartment array -
+        buffer.append("local_volume_array = Float64[];\n");
+
+        // how many biochemical species do we have?
+        int number_of_biochemical_species = model_tree.calculateTheNumberOfBiochemicalSpecies();
+        for (VLCGPBPKSpeciesModel species_model : species_model_array){
+
+            // Get species type -
+            String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+            if (species_type.equalsIgnoreCase("volume") == false){
+
+                // ok - get the compartment for this species -
+                String home_compartment = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+
+                // get index for home compartment -
+                int compartment_index = model_tree.findIndexOfCompartmentWithSymbol(home_compartment);
+
+                // write the line ..
+                String volume_symbol = "volume_"+home_compartment;
+                buffer.append(volume_symbol);
+                buffer.append(" = ");
+                buffer.append(" x[");
+                buffer.append(number_of_biochemical_species+compartment_index);
+                buffer.append("];\n");
+                buffer.append("push!(local_volume_array,volume_symbol);\n");
+            }
+        }
+
+
+        // return -
+        return buffer.toString();
+    }
+
 
     public String buildStoichiometricMatrixBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
 
@@ -416,6 +457,9 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append("# Correct nagative x's = throws errors in control even if small - \n");
         massbalances.append("idx = find(x->(x<0),x);\n");
         massbalances.append("x[idx] = 0.0;\n");
+        massbalances.append("\n");
+        massbalances.append("# Alias compartment volumes - \n");
+        massbalances.append(_generateSpeciesVolumeListForModelTree());
         massbalances.append("\n");
         massbalances.append("# Call the kinetics function - \n");
         massbalances.append("(rate_vector) = ");
