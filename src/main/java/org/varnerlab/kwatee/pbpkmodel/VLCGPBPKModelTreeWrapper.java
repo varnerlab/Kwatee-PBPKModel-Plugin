@@ -429,6 +429,32 @@ public class VLCGPBPKModelTreeWrapper {
         return reaction_name_array;
     }
 
+    public ArrayList<String> getBiochemistryControlTargetsFromPBPKModelTreeForCompartmentWithSymbol(String compartment_symbol) throws Exception {
+
+        if (compartment_symbol == null || compartment_symbol.isEmpty()){
+            throw new Exception("Oops! Missing or null compartment symbol = failed to find associated control data.");
+        }
+
+        // Method variables -
+        ArrayList<String> control_target_array = new ArrayList<String>();
+
+        // Formulate xpath -
+        String xpath_string = ".//control[@compartment=\""+compartment_symbol+"\"]/@target";
+        NodeList node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        int number_of_control_terms = node_list.getLength();
+        for (int control_term_index = 0;control_term_index<number_of_control_terms;control_term_index++) {
+
+            // get the compartment node -
+            Node control_node = node_list.item(control_term_index);
+            String name = control_node.getNodeValue();
+
+            if (control_target_array.contains(name) == false){
+                control_target_array.add(name);
+            }
+        }
+
+        return control_target_array;
+    }
 
     public ArrayList<VLCGPBPKBiochemistryControlModel> getBiochemistryControlModelFromPBPKModelTreeForCompartmentWithSymbol(String compartment_symbol) throws Exception {
 
@@ -441,6 +467,49 @@ public class VLCGPBPKModelTreeWrapper {
 
         // Formulate xpath -
         String xpath_string = ".//control[@compartment=\""+compartment_symbol+"\"]";
+        NodeList node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
+        int number_of_control_terms = node_list.getLength();
+        for (int control_term_index = 0;control_term_index<number_of_control_terms;control_term_index++){
+
+            // get the compartment node -
+            Node control_node = node_list.item(control_term_index);
+
+            // Get data from compartment node -
+            NamedNodeMap control_node_attributes = control_node.getAttributes();
+            String name = control_node_attributes.getNamedItem("name").getNodeValue();
+            String actor = control_node_attributes.getNamedItem("actor").getNodeValue();
+            String target = control_node_attributes.getNamedItem("target").getNodeValue();
+            String type = control_node_attributes.getNamedItem("type").getNodeValue();
+            String raw_record = actor+" --> "+target+" type:"+type+" ("+name+")";
+
+            // Create model -
+            VLCGPBPKBiochemistryControlModel control_model = new VLCGPBPKBiochemistryControlModel();
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME,name);
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR,actor);
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET,target);
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT,compartment_symbol);
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE,type);
+            control_model.setModelComponent(VLCGPBPKBiochemistryControlModel.FORMATTED_RAW_RECORD,raw_record);
+
+            // add model to array and go around again ...
+            control_model_array.add(control_model);
+        }
+
+        // return the list -
+        return control_model_array;
+    }
+
+    public ArrayList<VLCGPBPKBiochemistryControlModel> getBiochemistryControlModelFromPBPKModelTreeForCompartmentWithSymbol(String compartment_symbol,String target_symbol) throws Exception {
+
+        if (compartment_symbol == null || compartment_symbol.isEmpty()){
+            throw new Exception("Oops! Missing or null compartment symbol = failed to find associated control data.");
+        }
+
+        // Method variables -
+        ArrayList<VLCGPBPKBiochemistryControlModel> control_model_array = new ArrayList<VLCGPBPKBiochemistryControlModel>();
+
+        // Formulate xpath -
+        String xpath_string = ".//control[@compartment=\""+compartment_symbol+"\"][@target=\""+target_symbol+"\"]";
         NodeList node_list = _lookupPropertyCollectionFromTreeUsingXPath(xpath_string);
         int number_of_control_terms = node_list.getLength();
         for (int control_term_index = 0;control_term_index<number_of_control_terms;control_term_index++){

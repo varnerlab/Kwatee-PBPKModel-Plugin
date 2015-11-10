@@ -59,7 +59,7 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
     public Object getModelComponent(String key) throws Exception {
 
         if (key == null || _reaction_component_table.containsKey(key) == false){
-            throw new Exception("Missing biochemical reaction component. Can't find key = "+key);
+            throw new Exception("Missing biochemical reaction component. Can't find key = "+key+" table: "+_reaction_component_table);
         }
 
         return _reaction_component_table.get(key);

@@ -238,6 +238,8 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                     buffer.append("\t\t");
                     buffer.append("<control name=\"");
                     buffer.append(control_name);
+                    buffer.append("_");
+                    buffer.append(compartment_symbol);
                     buffer.append("\" actor=\"");
                     buffer.append(control_actor);
                     buffer.append("\" target=\"");
@@ -255,6 +257,8 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 buffer.append("\t\t");
                 buffer.append("<control name=\"");
                 buffer.append(control_name);
+                buffer.append("_");
+                buffer.append(control_compartment);
                 buffer.append("\" actor=\"");
                 buffer.append(control_actor);
                 buffer.append("\" target=\"");

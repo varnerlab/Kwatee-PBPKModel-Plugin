@@ -57,6 +57,8 @@ public class VLCGWriteJuliaPBPKModel implements VLCGOutputHandler {
         method_name_array_list.add("buildCompartmentFlowFunctionBuffer");
         method_name_array_list.add("buildStoichiometricMatrixBuffer");
         method_name_array_list.add("buildCompartmentConnectivityMatrixBuffer");
+        method_name_array_list.add("buildHeartRateFunctionBuffer");
+        method_name_array_list.add("buildCardiacDistributionFunctionBuffer");
 
         // Create path dictionary -
         HashMap<String,String> path_map = new HashMap<String,String>();
@@ -68,6 +70,8 @@ public class VLCGWriteJuliaPBPKModel implements VLCGOutputHandler {
         path_map.put("buildCompartmentFlowFunctionBuffer",_transformation_properties_tree.lookupKwateeCompartmentFlowFunctionFilePath());
         path_map.put("buildCompartmentConnectivityMatrixBuffer",_transformation_properties_tree.lookupKwateeCompartmentConnectivityMatrixFilePath());
         path_map.put("buildStoichiometricMatrixBuffer",_transformation_properties_tree.lookupKwateeStoichiometricMatrixFilePath());
+        path_map.put("buildHeartRateFunctionBuffer",_transformation_properties_tree.lookupKwateeHeartRateFunctionFilePath());
+        path_map.put("buildCardiacDistributionFunctionBuffer",_transformation_properties_tree.lookupKwateeCardiacDistributionFunctionFilePath());
 
         // execution loop -
         for (String method_name : method_name_array_list){

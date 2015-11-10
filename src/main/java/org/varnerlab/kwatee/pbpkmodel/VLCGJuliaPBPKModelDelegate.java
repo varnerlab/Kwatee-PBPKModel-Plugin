@@ -48,12 +48,25 @@ public class VLCGJuliaPBPKModelDelegate {
         // write out the species list -
         ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
         int species_index = 1;
+        String local_compartment_name = model_tree.getFirstCompartmentNameFromPBPKModelTree();
+        buffer.append("# ");
+        buffer.append(local_compartment_name);
+        buffer.append("\n");
         for (VLCGPBPKSpeciesModel species_model : species_model_array){
 
             // Get data from the model -
             String symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
             String compartment_name = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
             String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+
+            if (local_compartment_name.equalsIgnoreCase(compartment_name) == false && species_type.equalsIgnoreCase("biochemical")){
+                //buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+                buffer.append("\n");
+                buffer.append("# ");
+                buffer.append(compartment_name);
+                buffer.append("\n");
+            }
+
 
             if (species_type.equalsIgnoreCase("biochemical") == true){
 
@@ -79,8 +92,52 @@ public class VLCGJuliaPBPKModelDelegate {
 
             // update the species index -
             species_index++;
+
+            local_compartment_name = compartment_name;
         }
 
+        return buffer.toString();
+    }
+
+    public String _generateSpeciesInputAliasListForModelTree(VLCGPBPKModelTreeWrapper model_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // Get the array from the data dictionary -
+        buffer.append("input_concentration_array = data_dictionary[\"INPUT_CONCENTRATION_ARRAY\"]\n");
+
+        ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+        int input_concentration_index = 1;
+        for (VLCGPBPKSpeciesModel species_model : species_model_array) {
+
+            String species_symbol = (String) species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+
+            // ok, we the species -
+            String species_type = (String) species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+            if (species_type.equalsIgnoreCase("volume") == false) {
+
+                String home_compartment_symbol = (String) species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+                ArrayList<String> upstream_compartment_symbol_array = model_tree.getListOfCompartmentsUpstreamOfCompartmentWithSymbol(home_compartment_symbol);
+                for (String upstream_compartment : upstream_compartment_symbol_array) {
+
+                    // ok, if we have an upstream component that is [] -> we have a souce term
+                    if (upstream_compartment.equalsIgnoreCase("[]")) {
+
+                        // ok, generate an input species by default -
+                        String special_symbol = species_symbol + "_input_" + home_compartment_symbol;
+
+                        buffer.append(special_symbol);
+                        buffer.append(" = ");
+                        buffer.append("input_concentration_array[");
+                        buffer.append(input_concentration_index++);
+                        buffer.append("];\n");
+                    }
+                }
+            }
+        }
+
+        // return -
         return buffer.toString();
     }
 
@@ -97,6 +154,7 @@ public class VLCGJuliaPBPKModelDelegate {
 
         // how many biochemical species do we have?
         int number_of_biochemical_species = model_tree.calculateTheNumberOfBiochemicalSpecies();
+        int species_index = 1;
         for (VLCGPBPKSpeciesModel species_model : species_model_array){
 
             // Get species type -
@@ -109,14 +167,26 @@ public class VLCGJuliaPBPKModelDelegate {
                 // get index for home compartment -
                 int compartment_index = model_tree.findIndexOfCompartmentWithSymbol(home_compartment);
 
-                // write the line ..
                 String volume_symbol = "volume_"+home_compartment;
+                String species_symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+
+                // write the line ..
+                buffer.append("# ");
+                buffer.append(species_index++);
+                buffer.append(" ");
+                buffer.append(species_symbol);
+                buffer.append(" ");
+                buffer.append(home_compartment);
+                buffer.append("\n");
                 buffer.append(volume_symbol);
                 buffer.append(" = ");
                 buffer.append(" x[");
                 buffer.append(number_of_biochemical_species+compartment_index);
                 buffer.append("];\n");
-                buffer.append("push!(local_volume_array,volume_symbol);\n");
+                buffer.append("push!(local_volume_array,");
+                buffer.append(volume_symbol);
+                buffer.append(");\n");
+                buffer.append("\n");
             }
         }
 
@@ -171,6 +241,128 @@ public class VLCGJuliaPBPKModelDelegate {
         return buffer.toString();
     }
 
+    public String buildHeartRateFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // Get the control function name -
+        String heart_rate_function_name = property_tree.lookupKwateeHeartRateFunctionName();
+
+        // Copyright notice -
+        String copyright = copyrightFactory.getJuliaCopyrightHeader();
+        buffer.append(copyright);
+
+        // Fill in the buffer -
+        buffer.append("function ");
+        buffer.append(heart_rate_function_name);
+        buffer.append("(t,x,beats_per_minute,stroke_volume,data_dictionary)\n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("# ");
+        buffer.append(heart_rate_function_name);
+        buffer.append(".jl was generated using the Kwatee code generation system.\n");
+        buffer.append("# Username: ");
+        buffer.append(property_tree.lookupKwateeModelUsername());
+        buffer.append("\n");
+        buffer.append("# Type: ");
+        buffer.append(property_tree.lookupKwateeModelType());
+        buffer.append("\n");
+        buffer.append("# Version: ");
+        buffer.append(property_tree.lookupKwateeModelVersion());
+        buffer.append("\n");
+        buffer.append("# Generation timestamp: ");
+        buffer.append(date_formatter.format(today));
+        buffer.append("\n");
+        buffer.append("# \n");
+        buffer.append("# Arguments: \n");
+        buffer.append("# t  - current time \n");
+        buffer.append("# x  - state vector \n");
+        buffer.append("# beats_per_minute - heart beats per minute\n");
+        buffer.append("# stoke_volume - stroke volume per beat\n");
+        buffer.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("\n");
+
+        // Alias the species vector -
+        buffer.append("# Alias the species vector - \n");
+        buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
+        buffer.append("\n");
+
+        buffer.append("# Update the beats_per_minute - \n");
+        buffer.append("beats_per_minute = beats_per_minute;\n");
+        buffer.append("\n");
+
+        buffer.append("# Update the stroke volume - \n");
+        buffer.append("stroke_volume = stroke_volume;\n");
+        buffer.append("\n");
+
+        // write the return -
+        buffer.append("return (beats_per_minute,stroke_volume);\n");
+        buffer.append("end;\n");
+
+        // return -
+        return buffer.toString();
+    }
+
+    public String buildCardiacDistributionFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+
+        // Method variables -
+        StringBuilder buffer = new StringBuilder();
+
+        // Get the control function name -
+        String cd_rate_function_name = property_tree.lookupKwateeCardiacDistributionFunctionName();
+
+        // Copyright notice -
+        String copyright = copyrightFactory.getJuliaCopyrightHeader();
+        buffer.append(copyright);
+
+        // Fill in the buffer -
+        buffer.append("function ");
+        buffer.append(cd_rate_function_name);
+        buffer.append("(t,x,default_flow_parameter_array,data_dictionary)\n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("# ");
+        buffer.append(cd_rate_function_name);
+        buffer.append(".jl was generated using the Kwatee code generation system.\n");
+        buffer.append("# Username: ");
+        buffer.append(property_tree.lookupKwateeModelUsername());
+        buffer.append("\n");
+        buffer.append("# Type: ");
+        buffer.append(property_tree.lookupKwateeModelType());
+        buffer.append("\n");
+        buffer.append("# Version: ");
+        buffer.append(property_tree.lookupKwateeModelVersion());
+        buffer.append("\n");
+        buffer.append("# Generation timestamp: ");
+        buffer.append(date_formatter.format(today));
+        buffer.append("\n");
+        buffer.append("# \n");
+        buffer.append("# Arguments: \n");
+        buffer.append("# t  - current time \n");
+        buffer.append("# x  - state vector \n");
+        buffer.append("# default_flow_parameter_array - default flow parameters \n");
+        buffer.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
+        buffer.append("# ---------------------------------------------------------------------- #\n");
+        buffer.append("\n");
+
+        // Alias the species vector -
+        buffer.append("# Alias the species vector - \n");
+        buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
+        buffer.append("\n");
+
+        // update -
+        buffer.append("# Update the flow parameter array - \n");
+        buffer.append("flow_parameter_array = default_flow_parameter_array");
+        buffer.append("\n");
+
+        // write the return statement -
+        buffer.append("return (flow_parameter_array);\n");
+        buffer.append("end;\n");
+
+        // return -
+        return buffer.toString();
+    }
+
     public String buildCompartmentFlowFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
 
         // Method variables -
@@ -178,6 +370,18 @@ public class VLCGJuliaPBPKModelDelegate {
 
         // Get the control function name -
         String flow_function_name = property_tree.lookupKwateeCompartmentFlowFunctionName();
+
+        // Get/Set the heart rate function import -
+        String hr_function_name = property_tree.lookupKwateeHeartRateFunctionName();
+        buffer.append("include(\"");
+        buffer.append(hr_function_name);
+        buffer.append(".jl\");\n");
+
+        // Get/Set the cardiac distribution function import -
+        String cardiac_distribution_function_name = property_tree.lookupKwateeCardiacDistributionFunctionName();
+        buffer.append("include(\"");
+        buffer.append(cardiac_distribution_function_name);
+        buffer.append(".jl\");\n");
 
         // Copyright notice -
         String copyright = copyrightFactory.getJuliaCopyrightHeader();
@@ -216,17 +420,36 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
         buffer.append("\n");
 
-        // Get some stuff we'll need from the data dictonary -
-        buffer.append("# Get data we need from the data_dictionary - \n");
-        buffer.append("BPM = data_dictionary[\"DEFAULT_BEATS_PER_MINUTE\"];\n");
-        buffer.append("stroke_volume = data_dictionary[\"DEFAULT_STROKE_VOLUME\"];\n");
-        buffer.append("flow_parameter_array = data_dictionary[\"FLOW_PARAMETER_ARRAY\"];\n");
+        // Alias the input vector -
+        buffer.append("# Alias the species input vector - \n");
+        buffer.append(_generateSpeciesInputAliasListForModelTree(model_tree));
         buffer.append("\n");
 
+        // Get some stuff we'll need from the data dictonary -
+        buffer.append("# Get data we need from the data_dictionary - \n");
+        buffer.append("default_bpm = data_dictionary[\"DEFAULT_BEATS_PER_MINUTE\"];\n");
+        buffer.append("default_stroke_volume = data_dictionary[\"DEFAULT_STROKE_VOLUME\"];\n");
+        buffer.append("default_flow_parameter_array = data_dictionary[\"FLOW_PARAMETER_ARRAY\"];\n");
+        buffer.append("\n");
+
+        // update the sv and bpm -
+        buffer.append("# Update the heart rate, and stroke volume - \n");
+        buffer.append("(bpm,stroke_volume) = ");
+        buffer.append(hr_function_name);
+        buffer.append("(t,x,default_bpm,default_stroke_volume,data_dictionary);\n");
+
+        // upadate the distribution -
+        buffer.append("\n");
+        buffer.append("# Update the fraction of cardiac output going to each organ - \n");
+        buffer.append("(flow_parameter_array) = ");
+        buffer.append(cardiac_distribution_function_name);
+        buffer.append("(t,x,default_flow_parameter_array,data_dictionary);\n");
+
         // calculate the q-vector -
+        buffer.append("\n");
         buffer.append("# Calculate the q_vector - \n");
         buffer.append("q_vector = Float64[];\n");
-        buffer.append("cardiac_output = BPM*stroke_volume;\n");
+        buffer.append("cardiac_output = bpm*stroke_volume;\n");
         buffer.append("\n");
 
         // Get list of names -
@@ -373,7 +596,10 @@ public class VLCGJuliaPBPKModelDelegate {
 
                     // ok, we are done with the inflows .. write the endline -
                     buffer.append(");\n");
-                    buffer.append("push!(species_flow_vector,tmp_flow_term);\n");
+                    buffer.append("push!(species_flow_vector,");//tmp_flow_term);\n");
+                    buffer.append("(1.0/volume_");
+                    buffer.append(home_compartment_symbol);
+                    buffer.append(")*tmp_flow_term);\n");
                     buffer.append("tmp_flow_term = 0;\n");
                     buffer.append("\n");
                 }
@@ -458,9 +684,9 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append("idx = find(x->(x<0),x);\n");
         massbalances.append("x[idx] = 0.0;\n");
         massbalances.append("\n");
-        massbalances.append("# Alias compartment volumes - \n");
-        massbalances.append(_generateSpeciesVolumeListForModelTree());
-        massbalances.append("\n");
+        //massbalances.append("# Alias compartment volumes - \n");
+        //massbalances.append(_generateSpeciesVolumeListForModelTree(model_tree));
+
         massbalances.append("# Call the kinetics function - \n");
         massbalances.append("(rate_vector) = ");
         massbalances.append(kinetics_function_name);
@@ -504,7 +730,6 @@ public class VLCGJuliaPBPKModelDelegate {
             massbalances.append("\tstate_vector_index = (number_of_states)+compartment_index;\n");
             massbalances.append("\tdxdt_vector[state_vector_index] = tmp_dvdt_vector[compartment_index];\n");
             massbalances.append("end\n");
-            massbalances.append("\n");
         }
 
         // last line -
@@ -566,9 +791,9 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# Alias the species vector - \n");
         buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
         buffer.append("\n");
-        buffer.append("# ----------------------------------------------------------------------------------- #\n");
 
-        // Write transfer function
+
+        // Formulate/write the control models -
         ArrayList<VLCGPBPKCompartmentModel> compartment_model_array = model_tree.getCompartmentModelsFromPBPKModelTree();
         int control_index = 1;
         int reaction_index = 1;
@@ -577,79 +802,92 @@ public class VLCGJuliaPBPKModelDelegate {
             // Get the symbol of the compartment -
             String compartment_symbol = (String) compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
 
-            // what are the control terms for this compartment -
-            ArrayList<VLCGPBPKBiochemistryControlModel> control_model_array = model_tree.getBiochemistryControlModelFromPBPKModelTreeForCompartmentWithSymbol(compartment_symbol);
-            for (VLCGPBPKBiochemistryControlModel control_model : control_model_array) {
+            // Get the list of targets in this compartment -
+            ArrayList<String> control_target_array = model_tree.getBiochemistryControlTargetsFromPBPKModelTreeForCompartmentWithSymbol(compartment_symbol);
 
-                // Get the control comment string -
-                String comment_string = (String) control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.FORMATTED_RAW_RECORD);
-                String raw_actor = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
-                String target = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
-                String type = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
+            for (String control_target : control_target_array){
 
-                String actor = raw_actor+"_"+compartment_symbol;
+                // Get the control model for this compartment and target -
+                ArrayList<VLCGPBPKBiochemistryControlModel> control_model_array = model_tree.getBiochemistryControlModelFromPBPKModelTreeForCompartmentWithSymbol(compartment_symbol,control_target);
 
-                reaction_index = model_tree.findIndexForReactionWithNameInCompartment(target,compartment_symbol);
-
-                // Check the type -
-                buffer.append("# ");
-                buffer.append(comment_string);
+                buffer.append("# ----------------------------------------------------------------------------------- #\n");
+                buffer.append("transfer_function_vector = Float64[];\n");
                 buffer.append("\n");
-                if (type.equalsIgnoreCase("repression") || type.equalsIgnoreCase("inhibition")){
 
-                    // check do we have a zero inhibitor?
-                    buffer.append("if (");
-                    buffer.append(actor);
-                    buffer.append("<EPSILON);\n");
-                    buffer.append("\tpush!(transfer_function_vector,0.0);\n");
-                    buffer.append("else\n");
-                    buffer.append("\tpush!(transfer_function_vector,1.0 - (control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",1]*(");
-                    buffer.append(actor);
-                    buffer.append(")^control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",2])/(1+");
-                    buffer.append("control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",1]*(");
-                    buffer.append(actor);
-                    buffer.append(")^control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",2]));\n");
-                    buffer.append("end\n");
+                // if control_model_array has more than one element, then we have a target with multipe inputs ...
+                for (VLCGPBPKBiochemistryControlModel control_model : control_model_array) {
+
+                    // Get the control comment string -
+                    String comment_string = (String) control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.FORMATTED_RAW_RECORD);
+                    String raw_actor = (String) control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
+                    String target = (String) control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
+                    String type = (String) control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
+
+                    buffer.append("# ");
+                    buffer.append(comment_string);
                     buffer.append("\n");
-                }
-                else {
 
-                    // write -
-                    buffer.append("push!(transfer_function_vector,(control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",1]*(");
-                    buffer.append(actor);
-                    buffer.append(")^control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",2])/(1+");
-                    buffer.append("control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",1]*(");
-                    buffer.append(actor);
-                    buffer.append(")^control_parameter_array[");
-                    buffer.append(control_index);
-                    buffer.append(",2]));\n");
+                    String actor = raw_actor+"_"+compartment_symbol;
+
+                    if (type.equalsIgnoreCase("repression") || type.equalsIgnoreCase("inhibition")){
+
+                        // check do we have a zero inhibitor?
+                        buffer.append("if (");
+                        buffer.append(actor);
+                        buffer.append("<EPSILON);\n");
+                        buffer.append("\tpush!(transfer_function_vector,0.0);\n");
+                        buffer.append("else\n");
+                        buffer.append("\tpush!(transfer_function_vector,1.0 - (control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",1]*(");
+                        buffer.append(actor);
+                        buffer.append(")^control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",2])/(1+");
+                        buffer.append("control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",1]*(");
+                        buffer.append(actor);
+                        buffer.append(")^control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",2]));\n");
+                        buffer.append("end\n");
+                        buffer.append("\n");
+                    }
+                    else {
+
+                        // write -
+                        buffer.append("push!(transfer_function_vector,(control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",1]*(");
+                        buffer.append(actor);
+                        buffer.append(")^control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",2])/(1+");
+                        buffer.append("control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",1]*(");
+                        buffer.append(actor);
+                        buffer.append(")^control_parameter_array[");
+                        buffer.append(control_index);
+                        buffer.append(",2]));\n");
+                        buffer.append("\n");
+                    }
+
+                    // update -
+                    control_index++;
                 }
 
-                // update -
-                control_index++;
+                reaction_index = model_tree.findIndexForReactionWithNameInCompartment(control_target,compartment_symbol);
+
+                // integrate the transfer functions -
+                buffer.append("control_vector[");
+                buffer.append(reaction_index);
+                buffer.append("] = mean(transfer_function_vector);\n");
+                buffer.append("transfer_function_vector = 0;\n");
+                buffer.append("# ----------------------------------------------------------------------------------- #\n");
+                buffer.append("\n");
             }
-
-            // integrate the transfer functions -
-            buffer.append("control_vector[");
-            buffer.append(reaction_index);
-            buffer.append("] = mean(transfer_function_vector);\n");
-            buffer.append("transfer_function_vector = 0;\n");
-            buffer.append("# ----------------------------------------------------------------------------------- #\n");
-            buffer.append("\n");
         }
 
 
@@ -729,6 +967,12 @@ public class VLCGJuliaPBPKModelDelegate {
             // Get the symbol of the compartment -
             String compartment_symbol = (String) compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
 
+            buffer.append("# -------------------------------------------------------------------------- # \n");
+            buffer.append("# ");
+            buffer.append(compartment_symbol);
+            buffer.append("\n");
+            buffer.append("# -------------------------------------------------------------------------- # \n");
+
             // ok, lookup the reactions that can occur in this compartment -
             ArrayList<String> reaction_name_array = model_tree.getReactionNamesFromPBPKModelTreeInCompartmentWithSymbol(compartment_symbol);
             for (String reaction_name : reaction_name_array) {
@@ -785,11 +1029,26 @@ public class VLCGJuliaPBPKModelDelegate {
                         // create the compound symbol -
                         String local_reactant_symbol = (String) local_species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
                         String species_symbol = local_reactant_symbol+"_"+compartment_symbol;
+                        String stoichiometric_coefficient = (String)local_species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT);
 
-                        buffer.append("*");
-                        buffer.append(species_symbol);
-                        buffer.append(";\n");
+                        if (stoichiometric_coefficient.equalsIgnoreCase("1.0") == false){
+
+                            buffer.append("*((");
+                            buffer.append(species_symbol);
+                            buffer.append(")^");
+                            buffer.append(stoichiometric_coefficient);
+                            buffer.append(")");
+
+                        }
+                        else {
+
+                            buffer.append("*(");
+                            buffer.append(species_symbol);
+                            buffer.append(")");
+                        }
                     }
+
+                    buffer.append(";\n");
                 }
                 else {
 
@@ -798,9 +1057,7 @@ public class VLCGJuliaPBPKModelDelegate {
                 }
 
                 // write the push
-                buffer.append("push!(rate_vector,tmp_reaction*V_");
-                buffer.append(compartment_symbol);
-                buffer.append(");\n");
+                buffer.append("push!(rate_vector,tmp_reaction);\n");
                 buffer.append("tmp_reaction = 0;\n");
                 buffer.append("\n");
 
@@ -903,9 +1160,11 @@ public class VLCGJuliaPBPKModelDelegate {
 
             if (local_compartment_name.equalsIgnoreCase(compartment_name) == false && species_type.equalsIgnoreCase("biochemical")){
                 //buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+                buffer.append("\n");
             }
             else if (species_type.equalsIgnoreCase("volume") && write_last_comment_line){
                //buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+                buffer.append("\n");
                 write_last_comment_line = false;
             }
 
@@ -916,9 +1175,9 @@ public class VLCGJuliaPBPKModelDelegate {
             buffer.append("#\t");
             buffer.append(species_index);
             buffer.append("\t");
-            buffer.append(symbol);
-            buffer.append("::");
             buffer.append(compartment_name);
+            buffer.append(" ");
+            buffer.append(symbol);
             buffer.append("\n");
 
             local_compartment_name = compartment_name;
@@ -944,9 +1203,11 @@ public class VLCGJuliaPBPKModelDelegate {
 
             if (local_compartment_name.equalsIgnoreCase(compartment_name) == false && species_type.equalsIgnoreCase("biochemical")){
                 //buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+                buffer.append("\n");
             }
             else if (species_type.equalsIgnoreCase("volume") && write_last_comment_line){
                 //buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+                buffer.append("\n");
                 write_last_comment_line = false;
             }
 
@@ -955,9 +1216,9 @@ public class VLCGJuliaPBPKModelDelegate {
             buffer.append("#\t");
             buffer.append(species_index);
             buffer.append("\t");
-            buffer.append(symbol);
-            buffer.append("::");
             buffer.append(compartment_name);
+            buffer.append(" ");
+            buffer.append(symbol);
             buffer.append("\n");
 
             local_compartment_name = compartment_name;
@@ -975,10 +1236,15 @@ public class VLCGJuliaPBPKModelDelegate {
         // Get the list of compartment models -
         ArrayList<VLCGPBPKCompartmentModel> compartment_model_array = model_tree.getCompartmentModelsFromPBPKModelTree();
         int reaction_counter = 1;
+        local_compartment_name = model_tree.getFirstCompartmentNameFromPBPKModelTree();
         for (VLCGPBPKCompartmentModel compartment_model : compartment_model_array){
 
             // Get the symbol of the compartment -
             String compartment_symbol = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
+
+            buffer.append("# ");
+            buffer.append(compartment_symbol);
+            buffer.append("\n");
 
             // ok, lookup the reactions that can occur in this compartment -
             ArrayList<String> reaction_name_array = model_tree.getReactionNamesFromPBPKModelTreeInCompartmentWithSymbol(compartment_symbol);
@@ -997,9 +1263,10 @@ public class VLCGJuliaPBPKModelDelegate {
 
                 // fromulate the comment string -
                 StringBuilder comment = new StringBuilder();
-                comment.append(raw_string);
-                comment.append("\t");
                 comment.append(compartment_symbol);
+                comment.append("\t");
+                comment.append(raw_string);
+
 
                 // write the line -
                 buffer.append("push!(rate_constant_array,");
@@ -1013,6 +1280,8 @@ public class VLCGJuliaPBPKModelDelegate {
                 // update the counter -
                 reaction_counter++;
             }
+
+            buffer.append("\n");
         }
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
 
@@ -1080,6 +1349,10 @@ public class VLCGJuliaPBPKModelDelegate {
             // Get the symbol of the compartment -
             String compartment_symbol = (String) compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
 
+            buffer.append("# ");
+            buffer.append(compartment_symbol);
+            buffer.append("\n");
+
             // what are the control terms for this compartment -
             ArrayList<VLCGPBPKBiochemistryControlModel> control_model_array = model_tree.getBiochemistryControlModelFromPBPKModelTreeForCompartmentWithSymbol(compartment_symbol);
             for (VLCGPBPKBiochemistryControlModel control_model : control_model_array){
@@ -1097,7 +1370,7 @@ public class VLCGJuliaPBPKModelDelegate {
                 buffer.append("\n");
 
                 // update the control counter -
-                control_counter++;
+                //control_counter++;
 
                 // write the order line -
                 buffer.append("control_parameter_array[");
@@ -1111,6 +1384,8 @@ public class VLCGJuliaPBPKModelDelegate {
                 // update the control counter -
                 control_counter++;
             }
+
+            buffer.append("\n");
         }
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
 
@@ -1184,8 +1459,8 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# ---------------------------- DO NOT EDIT BELOW THIS LINE --------------------------------------- #\n");
         buffer.append("data_dictionary = Dict();\n");
         buffer.append("data_dictionary[\"INPUT_CONCENTRATION_ARRAY\"] = input_concentration_array;\n");
-        buffer.append("data_dictionary[\"DEFAULT_BEATS_PER_MINUTE\"] = beats_per_minute;\n");
-        buffer.append("data_dictionary[\"DEFAULT_STROKE_VOLUME\"] = stroke_volume;\n");
+        buffer.append("data_dictionary[\"DEFAULT_BEATS_PER_MINUTE\"] = default_beats_per_minute;\n");
+        buffer.append("data_dictionary[\"DEFAULT_STROKE_VOLUME\"] = default_stroke_volume;\n");
         buffer.append("data_dictionary[\"FLOW_PARAMETER_ARRAY\"] = flow_parameter_array;\n");
         buffer.append("data_dictionary[\"STOICHIOMETRIC_MATRIX\"] = S;\n");
         buffer.append("data_dictionary[\"FLOW_CONNECTIVITY_MATRIX\"] = C;\n");
