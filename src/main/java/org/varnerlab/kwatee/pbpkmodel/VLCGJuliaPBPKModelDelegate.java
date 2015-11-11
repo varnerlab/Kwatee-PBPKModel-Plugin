@@ -814,6 +814,8 @@ public class VLCGJuliaPBPKModelDelegate {
                 buffer.append("transfer_function_vector = Float64[];\n");
                 buffer.append("\n");
 
+                // does this contain an inhibitor step?
+                Boolean contains_inhibitor = false;
                 // if control_model_array has more than one element, then we have a target with multipe inputs ...
                 for (VLCGPBPKBiochemistryControlModel control_model : control_model_array) {
 
@@ -831,11 +833,13 @@ public class VLCGJuliaPBPKModelDelegate {
 
                     if (type.equalsIgnoreCase("repression") || type.equalsIgnoreCase("inhibition")){
 
+                        contains_inhibitor = true;
+
                         // check do we have a zero inhibitor?
                         buffer.append("if (");
                         buffer.append(actor);
                         buffer.append("<EPSILON);\n");
-                        buffer.append("\tpush!(transfer_function_vector,0.0);\n");
+                        buffer.append("\tpush!(transfer_function_vector,1.0);\n");
                         buffer.append("else\n");
                         buffer.append("\tpush!(transfer_function_vector,1.0 - (control_parameter_array[");
                         buffer.append(control_index);
@@ -880,13 +884,28 @@ public class VLCGJuliaPBPKModelDelegate {
 
                 reaction_index = model_tree.findIndexForReactionWithNameInCompartment(control_target,compartment_symbol);
 
-                // integrate the transfer functions -
-                buffer.append("control_vector[");
-                buffer.append(reaction_index);
-                buffer.append("] = mean(transfer_function_vector);\n");
-                buffer.append("transfer_function_vector = 0;\n");
-                buffer.append("# ----------------------------------------------------------------------------------- #\n");
-                buffer.append("\n");
+                // ok, the default is the maximum - but if we have inhibitor/repression reactions we
+                // use min -
+                if (contains_inhibitor == true){
+
+                    // integrate the transfer functions -
+                    buffer.append("control_vector[");
+                    buffer.append(reaction_index);
+                    buffer.append("] = minimum(transfer_function_vector);\n");
+                    buffer.append("transfer_function_vector = 0;\n");
+                    buffer.append("# ----------------------------------------------------------------------------------- #\n");
+                    buffer.append("\n");
+                }
+                else {
+
+                    // integrate the transfer functions -
+                    buffer.append("control_vector[");
+                    buffer.append(reaction_index);
+                    buffer.append("] = mean(transfer_function_vector);\n");
+                    buffer.append("transfer_function_vector = 0;\n");
+                    buffer.append("# ----------------------------------------------------------------------------------- #\n");
+                    buffer.append("\n");
+                }
             }
         }
 
