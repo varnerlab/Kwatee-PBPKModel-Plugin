@@ -389,6 +389,19 @@ public class VLCGPBPKModelTreeWrapper {
         return is_degradation_reaction;
     }
 
+    public String getEnzymeSymbolFromPBPKModelTreeForReactionWithNameAndCompartment(String compartment_symbol,String reaction_name) throws Exception {
+
+        // Method variables -
+        String enzyme_symbol = null;
+
+        // Formulate xpath -
+        String xpath_string = ".//location[@compartment=\""+compartment_symbol+"\"]/reaction[@name=\""+reaction_name+"\"]/@enzyme_symbol";
+        enzyme_symbol = _lookupPropertyValueFromTreeUsingXPath(xpath_string);
+
+        // return -
+        return enzyme_symbol;
+    }
+
     public String getRawReactionStringFromPBPKModelTreeForReactionWithNameAndCompartment(String compartment_symbol,String reaction_name) throws Exception {
 
         if (compartment_symbol == null || compartment_symbol.isEmpty()){

@@ -312,6 +312,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                     String reaction_name = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME);
                     String reverse_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE);
                     String forward_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD);
+                    String enzyme_symbol = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
                     Vector<VLCGPBPKSpeciesModel> reactant_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR);
                     Vector<VLCGPBPKSpeciesModel> product_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR);
 
@@ -325,6 +326,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                     reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME,reaction_name);
                     reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,reverse_flag);
                     reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,forward_flag);
+                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,enzyme_symbol);
                     tmp_vector_reaction.addElement(reaction_model_copy);
                 }
             }
@@ -348,6 +350,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 String formatted_raw_string = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD);
                 String reaction_name = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME);
                 String forward_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD);
+                String enzyme_symbol = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
                 Vector<VLCGPBPKSpeciesModel> reactant_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR);
                 Vector<VLCGPBPKSpeciesModel> product_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR);
 
@@ -360,6 +363,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 reaction_model_copy_forward.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME,reaction_name);
                 reaction_model_copy_forward.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,"0.0");
                 reaction_model_copy_forward.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,forward_flag);
+                reaction_model_copy_forward.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,enzyme_symbol);
                 complete_reaction_vector.addElement(reaction_model_copy_forward);
 
                 // update the reaction model -
@@ -371,13 +375,13 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 reaction_model_copy_reverse.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME,reaction_name+"_reverse");
                 reaction_model_copy_reverse.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,"0.0");
                 reaction_model_copy_reverse.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,forward_flag);
+                reaction_model_copy_reverse.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,enzyme_symbol);
                 complete_reaction_vector.addElement(reaction_model_copy_reverse);
             }
             else {
                 complete_reaction_vector.addElement(reaction_model);
             }
         }
-
 
         // iterate the updated reaction vector again, organized by compartment -
         int reaction_index = 1;
@@ -405,9 +409,13 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 // Get data from the model -
                 String reaction_name = (String)local_reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME);
                 String formatted_reaction_string = (String)local_reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD);
+                String enzyme_symbol = (String)local_reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
+
                 buffer.append("\t\t\t");
                 buffer.append("<reaction name=\"");
                 buffer.append(reaction_name);
+                buffer.append("\" enzyme_symbol=\"");
+                buffer.append(enzyme_symbol);
                 buffer.append("\" formatted_raw_string=\"");
                 buffer.append(formatted_reaction_string);
                 buffer.append("\" index=\"");

@@ -34,6 +34,7 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
     private Hashtable _reaction_component_table = new Hashtable();
 
     // hastable keys -
+    public static final String REACTION_ENZYME_SYMBOL = "reaction_enzyme_symbol";
     public static final String REACTION_NAME = "reaction_symbol";
     public static final String REACTION_COMPARTMENT_SYMBOL = "reaction_compartment_symbol";
     public static final String REACTION_FORWARD = "reaction_forward";

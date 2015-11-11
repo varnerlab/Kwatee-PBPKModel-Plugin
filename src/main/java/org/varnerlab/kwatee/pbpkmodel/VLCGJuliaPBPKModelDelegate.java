@@ -988,6 +988,17 @@ public class VLCGJuliaPBPKModelDelegate {
                 buffer.append(reaction_counter);
                 buffer.append("]");
 
+                // do we have an enzyme?
+                String enzyme_symbol = model_tree.getEnzymeSymbolFromPBPKModelTreeForReactionWithNameAndCompartment(compartment_symbol,reaction_name);
+                if (enzyme_symbol.equalsIgnoreCase("[]") == false){
+
+                    buffer.append("*(");
+                    buffer.append(enzyme_symbol);
+                    buffer.append("_");
+                    buffer.append(compartment_symbol);
+                    buffer.append(")");
+                }
+
                 // Get the reactants -
                 // ok, if we have a source -or- degradation reaction, these are 0 and 1st order => no sat coefficient
                 if (model_tree.isThisADegradationReaction(reaction_name,compartment_symbol) == false &&

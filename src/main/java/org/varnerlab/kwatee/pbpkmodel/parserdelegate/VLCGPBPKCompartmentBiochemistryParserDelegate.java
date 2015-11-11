@@ -66,22 +66,26 @@ public class VLCGPBPKCompartmentBiochemistryParserDelegate implements VLCGParser
             }
             else if (counter == 3){
                 String strTmp = ((String)token).replace("-", "_");
-                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REACTANTS,strTmp);
+                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,strTmp);
             }
             else if (counter == 4){
                 String strTmp = ((String)token).replace("-", "_");
-                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_PRODUCTS,strTmp);
+                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REACTANTS,strTmp);
             }
             else if (counter == 5){
-                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,token);
+                String strTmp = ((String)token).replace("-", "_");
+                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_PRODUCTS,strTmp);
             }
             else if (counter == 6){
+                _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,token);
+            }
+            else if (counter == 7){
                 // remove the ;
                 String strTmp = token.substring(0,token.length() - 1);
                 _model.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,strTmp);
             }
             else {
-                throw new Exception("The parseLine method of "+this.getClass().toString() + " does not support > six tokens. Incorrect format for line: "+line);
+                throw new Exception("The parseLine method of "+this.getClass().toString() + " does not support > seven tokens. Incorrect format for line: "+line);
             }
 
 
@@ -99,6 +103,7 @@ public class VLCGPBPKCompartmentBiochemistryParserDelegate implements VLCGParser
         // method variables -
         int counter = 1;
         StringBuffer buffer = new StringBuffer();
+        String enzyme_symbol = "[]";
 
         // split around the ','
         StringTokenizer stringTokenizer = new StringTokenizer(line,",");
@@ -117,10 +122,15 @@ public class VLCGPBPKCompartmentBiochemistryParserDelegate implements VLCGParser
                 buffer.append(" ");
             }
             else if (counter == 3){
-                buffer.append(token);
-                buffer.append(" = ");
+                enzyme_symbol = token;
             }
             else if (counter == 4){
+                buffer.append(token);
+                buffer.append(" -(");
+                buffer.append(enzyme_symbol);
+                buffer.append(")-> ");
+            }
+            else if (counter == 5){
                 buffer.append(token);
             }
 
