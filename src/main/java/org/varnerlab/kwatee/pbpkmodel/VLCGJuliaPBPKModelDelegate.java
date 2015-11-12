@@ -975,6 +975,13 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
         buffer.append("\n");
 
+        // Alias the characteristic data -
+        buffer.append("# Characteristic variables - \n");
+        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"]");
+        buffer.append("characteristic_concentration = characteristic_variable_array[2];\n");
+        buffer.append("characteristic_time = characteristic_variable_array[4];\n");
+        buffer.append("\n");
+
         // Write out the kinetics vector -
         buffer.append("\n");
         buffer.append("# Formulate the kinetic rate vector - \n");
@@ -1093,7 +1100,7 @@ public class VLCGJuliaPBPKModelDelegate {
                 }
 
                 // write the push
-                buffer.append("push!(rate_vector,tmp_reaction);\n");
+                buffer.append("push!(rate_vector,(characteristic_time/characteristic_concentration)*tmp_reaction);\n");
                 buffer.append("tmp_reaction = 0;\n");
                 buffer.append("\n");
 
