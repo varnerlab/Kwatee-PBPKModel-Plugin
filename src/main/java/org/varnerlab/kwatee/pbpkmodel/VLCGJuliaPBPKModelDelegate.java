@@ -415,6 +415,12 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# ---------------------------------------------------------------------- #\n");
         buffer.append("\n");
 
+        // Alias the characteristic data -
+        buffer.append("# Characteristic variables - \n");
+        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"]");
+        buffer.append("characteristic_flow_rate = characteristic_variable_array[3];\n");
+        buffer.append("\n");
+
         // Alias the species vector -
         buffer.append("# Alias the species vector - \n");
         buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
@@ -449,7 +455,7 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("\n");
         buffer.append("# Calculate the q_vector - \n");
         buffer.append("q_vector = Float64[];\n");
-        buffer.append("cardiac_output = bpm*stroke_volume;\n");
+        buffer.append("cardiac_output = (1.0/characteristic_flow_rate)*bpm*stroke_volume;\n");
         buffer.append("\n");
 
         // Get list of names -
@@ -901,7 +907,7 @@ public class VLCGJuliaPBPKModelDelegate {
                     // integrate the transfer functions -
                     buffer.append("control_vector[");
                     buffer.append(reaction_index);
-                    buffer.append("] = mean(transfer_function_vector);\n");
+                    buffer.append("] = maximum(transfer_function_vector);\n");
                     buffer.append("transfer_function_vector = 0;\n");
                     buffer.append("# ----------------------------------------------------------------------------------- #\n");
                     buffer.append("\n");
@@ -1150,6 +1156,23 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
         buffer.append("# ----------------------------------------------------------------------------------- #\n");
         buffer.append("\n");
+
+        // Last?? - Setup the characteristic concentration etc so we can make dimensionless equations -
+        buffer.append("\n");
+        buffer.append("# Characteristic variables array - \n");
+        buffer.append("characteristic_variable_array = zeros(4);\n");
+        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+        buffer.append("characteristic_volume = 1.0\n");
+        buffer.append("characteristic_concentration = 1.0\n");
+        buffer.append("characteristic_flow_rate = 1.0\n");
+        buffer.append("characteristic_time = characteristic_volume/characteristic_flow_rate;\n");
+        buffer.append("characteristic_variable_array[1] = characteristic_volume;\n");
+        buffer.append("characteristic_variable_array[2] = characteristic_concentration;\n");
+        buffer.append("characteristic_variable_array[3] = characteristic_flow_rate;\n");
+        buffer.append("characteristic_variable_array[4] = characteristic_time;\n");
+        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+        buffer.append("\n");
+
         buffer.append("# Load the stoichiometric matrix - \n");
 
         // Get the path to the stoichiometric matrix -
@@ -1198,8 +1221,16 @@ public class VLCGJuliaPBPKModelDelegate {
                 write_last_comment_line = false;
             }
 
-            // write ic record -
-            buffer.append("push!(initial_condition_array,");
+            if (species_type.equalsIgnoreCase("biochemical")){
+
+                // write ic record -
+                buffer.append("push!(initial_condition_array,(1.0/characteristic_concentration)*");
+            }
+            else {
+                // write ic record -
+                buffer.append("push!(initial_condition_array,(1.0/characteristic_volume)*");
+            }
+
             buffer.append(initial_amount);
             buffer.append(");\t");
             buffer.append("#\t");
@@ -1449,7 +1480,7 @@ public class VLCGJuliaPBPKModelDelegate {
         }
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
 
-        // Last(?) - for each inout flow, we need to setup the mass
+        // For each inout flow, we need to setup the mass
         // of biochemical species carried into the system -
         buffer.append("\n");
         buffer.append("# Input concentration array - \n");
@@ -1474,7 +1505,7 @@ public class VLCGJuliaPBPKModelDelegate {
 
                         // ok, generate an input species by default -
                         String special_symbol = species_symbol + "_input_" + home_compartment_symbol;
-                        buffer.append("push!(input_concentration_array,0.0);\t# ");
+                        buffer.append("push!(input_concentration_array,(1.0/characteristic_concentration)*0.0);\t# ");
                         buffer.append(input_concentration_index++);
                         buffer.append(" ");
                         buffer.append(special_symbol);
@@ -1485,9 +1516,11 @@ public class VLCGJuliaPBPKModelDelegate {
         }
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
 
+
         buffer.append("\n");
         buffer.append("# ---------------------------- DO NOT EDIT BELOW THIS LINE --------------------------------------- #\n");
         buffer.append("data_dictionary = Dict();\n");
+        buffer.append("data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"] = characteristic_variable_array;\n");
         buffer.append("data_dictionary[\"INPUT_CONCENTRATION_ARRAY\"] = input_concentration_array;\n");
         buffer.append("data_dictionary[\"DEFAULT_BEATS_PER_MINUTE\"] = default_beats_per_minute;\n");
         buffer.append("data_dictionary[\"DEFAULT_STROKE_VOLUME\"] = default_stroke_volume;\n");
