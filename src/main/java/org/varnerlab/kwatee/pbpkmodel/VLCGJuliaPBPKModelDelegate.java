@@ -9,6 +9,7 @@ import org.varnerlab.kwatee.pbpkmodel.model.VLCGPBPKSpeciesModel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.jar.Pack200;
 
 /**
  * Copyright (c) 2015 Varnerlab,
@@ -417,7 +418,7 @@ public class VLCGJuliaPBPKModelDelegate {
 
         // Alias the characteristic data -
         buffer.append("# Characteristic variables - \n");
-        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"]");
+        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"];\n");
         buffer.append("characteristic_flow_rate = characteristic_variable_array[3];\n");
         buffer.append("\n");
 
@@ -977,13 +978,12 @@ public class VLCGJuliaPBPKModelDelegate {
 
         // Alias the characteristic data -
         buffer.append("# Characteristic variables - \n");
-        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"]");
+        buffer.append("characteristic_variable_array = data_dictionary[\"CHARACTERISTIC_VARIABLE_ARRAY\"];\n");
         buffer.append("characteristic_concentration = characteristic_variable_array[2];\n");
         buffer.append("characteristic_time = characteristic_variable_array[4];\n");
         buffer.append("\n");
 
         // Write out the kinetics vector -
-        buffer.append("\n");
         buffer.append("# Formulate the kinetic rate vector - \n");
         buffer.append("rate_constant_array = data_dictionary[\"RATE_CONSTANT_ARRAY\"];\n");
         buffer.append("saturation_constant_array = data_dictionary[\"SATURATION_CONSTANT_ARRAY\"];\n");
@@ -1100,7 +1100,7 @@ public class VLCGJuliaPBPKModelDelegate {
                 }
 
                 // write the push
-                buffer.append("push!(rate_vector,(characteristic_time/characteristic_concentration)*tmp_reaction);\n");
+                buffer.append("push!(rate_vector,tmp_reaction);\n");
                 buffer.append("tmp_reaction = 0;\n");
                 buffer.append("\n");
 
@@ -1164,14 +1164,44 @@ public class VLCGJuliaPBPKModelDelegate {
         buffer.append("# ----------------------------------------------------------------------------------- #\n");
         buffer.append("\n");
 
+        // flow related parameters -
+        buffer.append("# Flow related parameters - \n");
+        buffer.append("default_beats_per_minute = 100.0;\n");
+        buffer.append("default_stroke_volume = 70*(1/1000);\n");
+        buffer.append("flow_parameter_array = Float64[]\n");
+        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+
+        // Get a list of connection names -
+        ArrayList<String> flow_connection_name_array = model_tree.getCompartmentConnectionNamesFromPBPKModelTree();
+        int connection_index = 1;
+        for (String connection_name : flow_connection_name_array){
+
+            // Get parameter value -
+            String parameter_value = model_tree.getParameterValueFromCompartmentConnectionWithName(connection_name);
+
+            // write line -
+            String comment_line = model_tree.generateCommentForConnectionParameterForCompartmentConnectionWithName(connection_name);
+            buffer.append("push!(flow_parameter_array,");
+            buffer.append(parameter_value);
+            buffer.append(");\t# ");
+            buffer.append(connection_index);
+            buffer.append("\t");
+            buffer.append(comment_line);
+
+            // update -
+            connection_index++;
+        }
+        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
+
+
         // Last?? - Setup the characteristic concentration etc so we can make dimensionless equations -
         buffer.append("\n");
         buffer.append("# Characteristic variables array - \n");
         buffer.append("characteristic_variable_array = zeros(4);\n");
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
-        buffer.append("characteristic_volume = 1.0\n");
-        buffer.append("characteristic_concentration = 1.0\n");
-        buffer.append("characteristic_flow_rate = 1.0\n");
+        buffer.append("characteristic_volume = 1.0;\n");
+        buffer.append("characteristic_concentration = 1.0;\n");
+        buffer.append("characteristic_flow_rate = default_beats_per_minute*default_stroke_volume;\n");
         buffer.append("characteristic_time = characteristic_volume/characteristic_flow_rate;\n");
         buffer.append("characteristic_variable_array[1] = characteristic_volume;\n");
         buffer.append("characteristic_variable_array[2] = characteristic_concentration;\n");
@@ -1321,29 +1351,50 @@ public class VLCGJuliaPBPKModelDelegate {
                 // Get the raw string -
                 String raw_string = model_tree.getRawReactionStringFromPBPKModelTreeForReactionWithNameAndCompartment(compartment_symbol,reaction_name);
 
-                // Default value -
-                float default_parameter_value = 1.0f;
-
-                // is this a degradation reaction?
-                if (model_tree.isThisADegradationReaction(reaction_name,compartment_symbol)){
-                    default_parameter_value = 0.1f;
-                }
-
                 // fromulate the comment string -
                 StringBuilder comment = new StringBuilder();
                 comment.append(compartment_symbol);
                 comment.append("\t");
                 comment.append(raw_string);
 
+                // Default value -
+                float default_parameter_value = 1.0f;
 
-                // write the line -
-                buffer.append("push!(rate_constant_array,");
-                buffer.append(default_parameter_value);
-                buffer.append(");\t# ");
-                buffer.append(reaction_counter);
-                buffer.append("\t");
-                buffer.append(comment.toString());
-                buffer.append("\n");
+                // is this a degradation reaction?
+                if (model_tree.isThisADegradationReaction(reaction_name,compartment_symbol)){
+                    default_parameter_value = 0.1f;
+
+                    // write the line -
+                    buffer.append("push!(rate_constant_array,(characteristic_time)*");
+                    buffer.append(default_parameter_value);
+                    buffer.append(");\t# ");
+                    buffer.append(reaction_counter);
+                    buffer.append("\t");
+                    buffer.append(comment.toString());
+                    buffer.append("\n");
+                }
+                else if (model_tree.isThisASourceReaction(reaction_name,compartment_symbol)){
+
+                    // write the line -
+                    buffer.append("push!(rate_constant_array,(characteristic_time/characteristic_concentration)*");
+                    buffer.append(default_parameter_value);
+                    buffer.append(");\t# ");
+                    buffer.append(reaction_counter);
+                    buffer.append("\t");
+                    buffer.append(comment.toString());
+                    buffer.append("\n");
+                }
+                else {
+
+                    // write the line -
+                    buffer.append("push!(rate_constant_array,(1.0/characteristic_time)*");
+                    buffer.append(default_parameter_value);
+                    buffer.append(");\t# ");
+                    buffer.append(reaction_counter);
+                    buffer.append("\t");
+                    buffer.append(comment.toString());
+                    buffer.append("\n");
+                }
 
                 // update the counter -
                 reaction_counter++;
@@ -1454,36 +1505,6 @@ public class VLCGJuliaPBPKModelDelegate {
             }
 
             buffer.append("\n");
-        }
-        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
-
-        // flow related parameters -
-        buffer.append("\n");
-        buffer.append("# Flow related parameters - \n");
-        buffer.append("default_beats_per_minute = 100.0;\n");
-        buffer.append("default_stroke_volume = 70*(1/1000);\n");
-        buffer.append("flow_parameter_array = Float64[]\n");
-        buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
-
-        // Get a list of connection names -
-        ArrayList<String> flow_connection_name_array = model_tree.getCompartmentConnectionNamesFromPBPKModelTree();
-        int connection_index = 1;
-        for (String connection_name : flow_connection_name_array){
-
-            // Get parameter value -
-            String parameter_value = model_tree.getParameterValueFromCompartmentConnectionWithName(connection_name);
-
-            // write line -
-            String comment_line = model_tree.generateCommentForConnectionParameterForCompartmentConnectionWithName(connection_name);
-            buffer.append("push!(flow_parameter_array,");
-            buffer.append(parameter_value);
-            buffer.append(");\t# ");
-            buffer.append(connection_index);
-            buffer.append("\t");
-            buffer.append(comment_line);
-
-            // update -
-            connection_index++;
         }
         buffer.append("# ------------------------------------------------------------------------------------------------ #\n");
 
