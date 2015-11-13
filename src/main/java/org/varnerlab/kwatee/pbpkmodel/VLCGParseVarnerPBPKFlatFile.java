@@ -537,6 +537,18 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 // add this to the species collection?
                 _addSpeciesModelToSpeciesModelList(model);
             }
+
+            // grab the enzyme if we have it -
+            if (reaction_model.containsKey(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL)){
+
+                // ok, we have a model - get it and add to collection -
+                VLCGPBPKSpeciesModel enzyme_model = (VLCGPBPKSpeciesModel)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL);
+
+                System.out.println("Enzyme - "+enzyme_model);
+
+                // add -
+                _addSpeciesModelToSpeciesModelList(enzyme_model);
+            }
         }
 
         // ok, we have a unqiue list of species models -
@@ -545,6 +557,8 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
 
             VLCGPBPKSpeciesModel model = species_list.next();
             String symbol = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+
+            System.out.println(symbol);
 
             if (symbol.equalsIgnoreCase("[]") == false){
 
@@ -596,7 +610,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
 
             if (reverse_flag.equalsIgnoreCase("0") == false){
 
-                System.out.print("Reverse - "+reverse_flag+" connection_name="+connection_name+"\n");
+                //System.out.print("Reverse - "+reverse_flag+" connection_name="+connection_name+"\n");
 
                 // we have a reversible connection -
                 buffer.append("\t\t<connection index=\"");
@@ -674,7 +688,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         String species_symbol = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
         Boolean contains_species = false;
 
-        if (species_symbol.equalsIgnoreCase("{}")){
+        if (species_symbol.equalsIgnoreCase("[]")){
             return;
         }
 

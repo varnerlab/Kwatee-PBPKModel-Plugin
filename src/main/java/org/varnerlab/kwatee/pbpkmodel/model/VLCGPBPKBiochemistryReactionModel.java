@@ -46,6 +46,7 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
 
     public static final String BIOCHEMISTRY_REACTION_REACTANT_VECTOR = "reactant_vector";
     public static final String BIOCHEMISTRY_REACTION_PRODUCT_VECTOR = "product_vector";
+    public static final String BIOCHEMISTRY_REACTION_ENZYME_MODEL = "enzyme_model";
 
     // copy constuctor -
     public VLCGPBPKBiochemistryReactionModel(VLCGPBPKBiochemistryReactionModel model){
@@ -77,6 +78,10 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
         _reaction_component_table.put(key,value);
     }
 
+    public Boolean containsKey(String key) throws Exception {
+        return _reaction_component_table.containsKey(key);
+    }
+
     @Override
     public Object doExecute() throws Exception {
 
@@ -91,6 +96,21 @@ public class VLCGPBPKBiochemistryReactionModel implements VLCGPBPKModelComponent
         // Cache the product and reactant vector -
         setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR,reactant_vector);
         setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR,product_vector);
+
+        // Create the enzyme model -
+        if (_reaction_component_table.containsKey(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL) == true){
+
+            // get the symbol -
+            String enzyme_symbol = (String)_reaction_component_table.get(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
+
+            // Create species model -
+            VLCGPBPKSpeciesModel enzyme_model = new VLCGPBPKSpeciesModel();
+            enzyme_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COEFFICIENT,"0.0");
+            enzyme_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL,enzyme_symbol);
+
+            // set -
+            setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL,enzyme_model);
+        }
 
         return null;
     }
