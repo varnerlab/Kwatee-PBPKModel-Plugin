@@ -544,12 +544,40 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
                 // ok, we have a model - get it and add to collection -
                 VLCGPBPKSpeciesModel enzyme_model = (VLCGPBPKSpeciesModel)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL);
 
-                System.out.println("Enzyme - "+enzyme_model);
+                //System.out.println("Enzyme - "+enzyme_model);
 
                 // add -
                 _addSpeciesModelToSpeciesModelList(enzyme_model);
             }
         }
+
+        // We may have species that appear as actors in the control statements, that are *not* in the reactions
+        String control_class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentBiochemistryControlParserDelegate";
+        Vector<VLCGPBPKBiochemistryControlModel> biochemistry_control_vector = (Vector)_model_component_table.get(Class.forName(control_class_name_key));
+        Iterator<VLCGPBPKBiochemistryControlModel> biochemistry_control_iterator = biochemistry_control_vector.iterator();
+        while (biochemistry_control_iterator.hasNext()) {
+
+            // Get the model -
+            VLCGPBPKBiochemistryControlModel biochemistry_control_model = biochemistry_control_iterator.next();
+
+            // Get data from the model -
+            String control_name = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME);
+            String control_actor = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
+            String control_target = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
+            String control_type = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
+            String control_compartment = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT);
+
+            // Create a species model -
+            VLCGPBPKSpeciesModel species_model = new VLCGPBPKSpeciesModel();
+            species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL,control_actor);
+            species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT,control_compartment);
+
+            System.out.println("Control - "+species_model);
+
+            // add -
+            _addSpeciesModelToSpeciesModelList(species_model);
+        }
+
 
         // ok, we have a unqiue list of species models -
         Iterator<VLCGPBPKSpeciesModel> species_list = _species_model_vector.iterator();

@@ -887,9 +887,13 @@ public class VLCGJuliaPBPKModelDelegate {
 
                     // update -
                     control_index++;
+
+                    System.out.println(comment_string);
                 }
 
                 reaction_index = model_tree.findIndexForReactionWithNameInCompartment(control_target,compartment_symbol);
+
+
 
                 // ok, the default is the maximum - but if we have inhibitor/repression reactions we
                 // use min -
@@ -1443,7 +1447,7 @@ public class VLCGJuliaPBPKModelDelegate {
                         buffer.append(reaction_counter);
                         buffer.append(",");
                         buffer.append(local_species_index);
-                        buffer.append("] = 1.0;\n");
+                        buffer.append("] = 1.0*(1.0/characteristic_concentration);\n");
                     }
                 }
 
