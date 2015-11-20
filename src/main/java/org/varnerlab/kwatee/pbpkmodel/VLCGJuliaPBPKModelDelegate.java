@@ -726,14 +726,14 @@ public class VLCGJuliaPBPKModelDelegate {
             massbalances.append("# Encode the biochemical balance equations as a matrix vector product - \n");
             massbalances.append("tmp_vector = flow_terms_vector + S*rate_vector;\n");
             massbalances.append("number_of_states = length(tmp_vector);\n");
-            massbalances.append("for state_index in [1:number_of_states]\n");
+            massbalances.append("for state_index in collect(1:number_of_states)\n");
             massbalances.append("\tdxdt_vector[state_index] = tau_array[state_index]*tmp_vector[state_index];\n");
             massbalances.append("end\n");
             massbalances.append("\n");
             massbalances.append("# Encode the volume balance equations as a matrix vector product - \n");
             massbalances.append("tmp_dvdt_vector = C*q_vector;\n");
             massbalances.append("number_of_compartments = length(tmp_dvdt_vector);\n");
-            massbalances.append("for compartment_index in [1:number_of_compartments]\n");
+            massbalances.append("for compartment_index in collect(1:number_of_compartments)\n");
             massbalances.append("\tstate_vector_index = (number_of_states)+compartment_index;\n");
             massbalances.append("\tdxdt_vector[state_vector_index] = tmp_dvdt_vector[compartment_index];\n");
             massbalances.append("end\n");
@@ -888,7 +888,7 @@ public class VLCGJuliaPBPKModelDelegate {
                     // update -
                     control_index++;
 
-                    System.out.println(comment_string);
+                    // System.out.println(comment_string);
                 }
 
                 reaction_index = model_tree.findIndexForReactionWithNameInCompartment(control_target,compartment_symbol);
@@ -1630,7 +1630,7 @@ public class VLCGJuliaPBPKModelDelegate {
         driver.append("\n");
 
         driver.append("# Get required stuff from DataFile struct -\n");
-        driver.append("TSIM = [TSTART:Ts:TSTOP];\n");
+        driver.append("TSIM = collect(TSTART:Ts:TSTOP);\n");
         driver.append("initial_condition_vector = data_dictionary[\"INITIAL_CONDITION_ARRAY\"];\n");
         driver.append("\n");
 
@@ -1638,7 +1638,7 @@ public class VLCGJuliaPBPKModelDelegate {
         driver.append("fbalances(t,y,ydot) = ");
         driver.append(property_tree.lookupKwateeBalanceFunctionName());
         driver.append("(t,y,ydot,data_dictionary);\n");
-        driver.append("X = Sundials.cvode(fbalances,initial_condition_vector,TSIM);\n");
+        driver.append("X = Sundials.cvode(fbalances,initial_condition_vector,TSIM,reltol=1e-4,abstol=1e-8);\n");
         driver.append("\n");
         driver.append("return (TSIM,X);\n");
 
