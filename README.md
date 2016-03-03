@@ -134,7 +134,7 @@ __Job configuration files__:In addition to model specification files, to succesf
 </Model>
 ~~~
 
-The majority of the fields in the job configuration file can stay at the default values. However, you will need to specify your path structure (where Kwatee can find your files, where you want your generated code to reside, and where to find the server). Thus, you should edit the paths in the `<listOfPaths>...</listOfPaths>` section of the configuration file with your values. There typically only a few paths that must be specified:
+The majority of the fields in the job configuration file can stay at the default values. However, you will need to specify your path structure (where Kwatee can find your files, where you want your generated code to reside, and where to find the server). Thus, you should edit the paths in the `<listOfPaths>...</listOfPaths>` section of the configuration file with your values. There are typically only a few paths that must be specified:
 
 * `KWATEE_INPUT_PATH`: Directory where Kwatee will find your `Model.net` file.
 * `KWATEE_SOURCE_OUTPUT_PATH`: Directory where your generated model source code will be written (default is `src`).
