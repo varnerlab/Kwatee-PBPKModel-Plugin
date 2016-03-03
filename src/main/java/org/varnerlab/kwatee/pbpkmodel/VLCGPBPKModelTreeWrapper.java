@@ -752,11 +752,13 @@ public class VLCGPBPKModelTreeWrapper {
             NamedNodeMap compartment_node_attributes = compartment_node.getAttributes();
             String compartment_name = compartment_node_attributes.getNamedItem("symbol").getNodeValue();
             String compartment_volume = compartment_node_attributes.getNamedItem("initial_volume").getNodeValue();
+            String stored_compartment_index = compartment_node_attributes.getNamedItem("index").getNodeValue();
 
             // Create compartment model -
             VLCGPBPKCompartmentModel model = new VLCGPBPKCompartmentModel();
             model.setModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL,compartment_name);
             model.setModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_VOLUME,compartment_volume);
+            model.setModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_INDEX,stored_compartment_index);
 
             // cache -
             compartment_model_array.add(model);

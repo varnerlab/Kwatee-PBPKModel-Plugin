@@ -36,6 +36,7 @@ public class VLCGPBPKCompartmentModel implements VLCGPBPKModelComponent {
     public static final String COMPARTMENT_VOLUME = "compartment_volume";
     public static final String RAW_RECORD = "raw_record";
     public static final String FORMATTED_RAW_RECORD = "formatted_raw_record";
+    public static final String COMPARTMENT_INDEX = "compartment_index";
 
     @Override
     public Object getModelComponent(String key) throws Exception {

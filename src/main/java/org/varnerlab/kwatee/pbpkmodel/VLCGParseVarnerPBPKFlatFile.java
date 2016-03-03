@@ -122,7 +122,7 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         xml_buffer.append(global_list_of_biochemical_control_terms);
         xml_buffer.append("\t</listOfBiochemistryControlTerms>\n");
         xml_buffer.append("\n");
-        
+
         // Flow rules -
         String global_list_of_species_rules = _generateListOfSpeciesFlowRules();
         xml_buffer.append("\t<listOfSpeciesRules>\n");
@@ -167,44 +167,49 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
 
     // private helper methods -
     private String _generateListOfSpeciesFlowRules() throws Exception {
-    
+
         // Method variables -
         StringBuilder buffer = new StringBuilder();
 
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKSpeciesRulesParserDelegate";
         Vector<VLCGPBPKSpeciesModel> species_model_vector = (Vector)_model_component_table.get(Class.forName(class_name_key));
-        for (VLCGPBPKSpeciesModel model : species_model_vector){
 
-            // Get data from the model -
-            String species_symbol = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
-            String rule_type = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_TYPE);
+        // Check for null -
+        if (species_model_vector != null){
 
-            // write the record -
-            buffer.append("\t\t");
-            buffer.append("<speciesRule species=\"");
-            buffer.append(species_symbol);
-            buffer.append("\" type=\"");
-            buffer.append(rule_type);
-            buffer.append("\"");
+          for (VLCGPBPKSpeciesModel model : species_model_vector){
 
-            // does this model contain a rule_compartemnt?
-            if (model.containsKey(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT)){
+              // Get data from the model -
+              String species_symbol = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+              String rule_type = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_TYPE);
 
-                String rule_compartment = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT);
+              // write the record -
+              buffer.append("\t\t");
+              buffer.append("<speciesRule species=\"");
+              buffer.append(species_symbol);
+              buffer.append("\" type=\"");
+              buffer.append(rule_type);
+              buffer.append("\"");
 
-                buffer.append(" compartment=\"");
-                buffer.append(rule_compartment);
-                buffer.append("\"");
-            }
+              // does this model contain a rule_compartemnt?
+              if (model.containsKey(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT)){
 
-            // write closing line -
-            buffer.append("/>\n");
+                  String rule_compartment = (String)model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_RULE_COMPARTMENT);
+
+                  buffer.append(" compartment=\"");
+                  buffer.append(rule_compartment);
+                  buffer.append("\"");
+              }
+
+              // write closing line -
+              buffer.append("/>\n");
+          }
         }
 
         // return the buffer -
         return buffer.toString();
     }
-    
+
     private String _generateListOfBiochemicalControlTerms() throws Exception {
 
         // Method variables -
@@ -213,64 +218,68 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         // Get the control -
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentBiochemistryControlParserDelegate";
         Vector<VLCGPBPKBiochemistryControlModel> control_vector = (Vector)_model_component_table.get(Class.forName(class_name_key));
-        Iterator<VLCGPBPKBiochemistryControlModel> control_vector_iterator = control_vector.iterator();
-        while (control_vector_iterator.hasNext()){
 
-            // Get the model -
-            VLCGPBPKBiochemistryControlModel control_model = control_vector_iterator.next();
+        // Check for null -
+        if (control_vector != null) {
 
-            // Get data from the model -
-            String control_name = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME);
-            String control_actor = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
-            String control_target = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
-            String control_type = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
-            String control_compartment = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT);
+          Iterator<VLCGPBPKBiochemistryControlModel> control_vector_iterator = control_vector.iterator();
+          while (control_vector_iterator.hasNext()){
+
+              // Get the model -
+              VLCGPBPKBiochemistryControlModel control_model = control_vector_iterator.next();
+
+              // Get data from the model -
+              String control_name = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME);
+              String control_actor = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
+              String control_target = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
+              String control_type = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
+              String control_compartment = (String)control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT);
 
 
-            // ok, do we have a *?
-            if (control_compartment.equalsIgnoreCase("*")){
+              // ok, do we have a *?
+              if (control_compartment.equalsIgnoreCase("*")){
 
-                for (VLCGPBPKCompartmentModel compartment_model : _compartment_model_vector){
+                  for (VLCGPBPKCompartmentModel compartment_model : _compartment_model_vector){
 
-                    // Get the compartment symbol -
-                    String compartment_symbol = (String) compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
+                      // Get the compartment symbol -
+                      String compartment_symbol = (String) compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
 
-                    buffer.append("\t\t");
-                    buffer.append("<control name=\"");
-                    buffer.append(control_name);
-                    buffer.append("_");
-                    buffer.append(compartment_symbol);
-                    buffer.append("\" actor=\"");
-                    buffer.append(control_actor);
-                    buffer.append("\" target=\"");
-                    buffer.append(control_target);
-                    buffer.append("\" type=\"");
-                    buffer.append(control_type);
-                    buffer.append("\" compartment=\"");
-                    buffer.append(compartment_symbol);
-                    buffer.append("\"/>\n");
-                }
-            }
-            else {
+                      buffer.append("\t\t");
+                      buffer.append("<control name=\"");
+                      buffer.append(control_name);
+                      buffer.append("_");
+                      buffer.append(compartment_symbol);
+                      buffer.append("\" actor=\"");
+                      buffer.append(control_actor);
+                      buffer.append("\" target=\"");
+                      buffer.append(control_target);
+                      buffer.append("\" type=\"");
+                      buffer.append(control_type);
+                      buffer.append("\" compartment=\"");
+                      buffer.append(compartment_symbol);
+                      buffer.append("\"/>\n");
+                  }
+              }
+              else {
 
-                // we have a specific compartment - build the record
-                buffer.append("\t\t");
-                buffer.append("<control name=\"");
-                buffer.append(control_name);
-                buffer.append("_");
-                buffer.append(control_compartment);
-                buffer.append("\" actor=\"");
-                buffer.append(control_actor);
-                buffer.append("\" target=\"");
-                buffer.append(control_target);
-                buffer.append("\" type=\"");
-                buffer.append(control_type);
-                buffer.append("\" compartment=\"");
-                buffer.append(control_compartment);
-                buffer.append("\"/>\n");
-            }
+                  // we have a specific compartment - build the record
+                  buffer.append("\t\t");
+                  buffer.append("<control name=\"");
+                  buffer.append(control_name);
+                  buffer.append("_");
+                  buffer.append(control_compartment);
+                  buffer.append("\" actor=\"");
+                  buffer.append(control_actor);
+                  buffer.append("\" target=\"");
+                  buffer.append(control_target);
+                  buffer.append("\" type=\"");
+                  buffer.append(control_type);
+                  buffer.append("\" compartment=\"");
+                  buffer.append(control_compartment);
+                  buffer.append("\"/>\n");
+              }
+          }
         }
-
 
         // return the populated buffer -
         return buffer.toString();
@@ -281,58 +290,63 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
 
         // Method variables -
         StringBuilder buffer = new StringBuilder();
+        Vector<VLCGPBPKBiochemistryReactionModel> tmp_vector_reaction = new Vector<VLCGPBPKBiochemistryReactionModel>();
+        Vector<VLCGPBPKBiochemistryReactionModel> complete_reaction_vector = new Vector<VLCGPBPKBiochemistryReactionModel>();
 
         // Get the translation reactions -
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentBiochemistryParserDelegate";
         Vector<VLCGPBPKBiochemistryReactionModel> reaction_vector = (Vector)_model_component_table.get(Class.forName(class_name_key));
-        ListIterator<VLCGPBPKBiochemistryReactionModel> reaction_iterator = reaction_vector.listIterator();
-        Vector<VLCGPBPKBiochemistryReactionModel> tmp_vector_reaction = new Vector<VLCGPBPKBiochemistryReactionModel>();
-        Vector<VLCGPBPKBiochemistryReactionModel> complete_reaction_vector = new Vector<VLCGPBPKBiochemistryReactionModel>();
-        while (reaction_iterator.hasNext()) {
 
-            // get the connection model -
-            VLCGPBPKBiochemistryReactionModel reaction_model = (VLCGPBPKBiochemistryReactionModel)reaction_iterator.next();
-            reaction_model.doExecute();
+        // Check for null -
+        if (reaction_vector != null){
 
-            // where is this reaction taking place?
-            String reaction_location = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_COMPARTMENT_SYMBOL);
-            if (reaction_location.equalsIgnoreCase("*")){
+          ListIterator<VLCGPBPKBiochemistryReactionModel> reaction_iterator = reaction_vector.listIterator();
+          while (reaction_iterator.hasNext()) {
 
-                // ok, this reaction takes place in *all* compartments -
-                // replace this reaction object, with an exact copy in all the compartments -
-                //reaction_iterator.remove();
+              // get the connection model -
+              VLCGPBPKBiochemistryReactionModel reaction_model = (VLCGPBPKBiochemistryReactionModel)reaction_iterator.next();
+              reaction_model.doExecute();
 
-                int number_of_compartments = _compartment_model_vector.size();
-                for (int compartment_index = 0;compartment_index<number_of_compartments;compartment_index++){
+              // where is this reaction taking place?
+              String reaction_location = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_COMPARTMENT_SYMBOL);
+              if (reaction_location.equalsIgnoreCase("*")){
 
-                    // get compartment model (and symbol) -
-                    VLCGPBPKCompartmentModel compartment_model = _compartment_model_vector.get(compartment_index);
-                    String compartment_symbol = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
-                    String formatted_raw_string = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD);
-                    String reaction_name = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME);
-                    String reverse_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE);
-                    String forward_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD);
-                    String enzyme_symbol = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
-                    Vector<VLCGPBPKSpeciesModel> reactant_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR);
-                    Vector<VLCGPBPKSpeciesModel> product_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR);
+                  // ok, this reaction takes place in *all* compartments -
+                  // replace this reaction object, with an exact copy in all the compartments -
+                  //reaction_iterator.remove();
+
+                  int number_of_compartments = _compartment_model_vector.size();
+                  for (int compartment_index = 0;compartment_index<number_of_compartments;compartment_index++){
+
+                      // get compartment model (and symbol) -
+                      VLCGPBPKCompartmentModel compartment_model = _compartment_model_vector.get(compartment_index);
+                      String compartment_symbol = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
+                      String formatted_raw_string = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD);
+                      String reaction_name = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME);
+                      String reverse_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE);
+                      String forward_flag = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD);
+                      String enzyme_symbol = (String)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL);
+                      Vector<VLCGPBPKSpeciesModel> reactant_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR);
+                      Vector<VLCGPBPKSpeciesModel> product_vector = (Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR);
 
 
-                    // update the reaction model -
-                    VLCGPBPKBiochemistryReactionModel reaction_model_copy = new VLCGPBPKBiochemistryReactionModel();
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_COMPARTMENT_SYMBOL,compartment_symbol);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR,product_vector);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR,reactant_vector);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD,formatted_raw_string);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME,reaction_name);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,reverse_flag);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,forward_flag);
-                    reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,enzyme_symbol);
-                    tmp_vector_reaction.addElement(reaction_model_copy);
-                }
-            }
-            else {
-                tmp_vector_reaction.addElement(reaction_model);
-            }
+                      // update the reaction model -
+                      VLCGPBPKBiochemistryReactionModel reaction_model_copy = new VLCGPBPKBiochemistryReactionModel();
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_COMPARTMENT_SYMBOL,compartment_symbol);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR,product_vector);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR,reactant_vector);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.FORMATTED_RAW_RECORD,formatted_raw_string);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_NAME,reaction_name);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_REVERSE,reverse_flag);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_FORWARD,forward_flag);
+                      reaction_model_copy.setModelComponent(VLCGPBPKBiochemistryReactionModel.REACTION_ENZYME_SYMBOL,enzyme_symbol);
+                      tmp_vector_reaction.addElement(reaction_model_copy);
+                  }
+              }
+              else {
+                  tmp_vector_reaction.addElement(reaction_model);
+              }
+          }
         }
 
         // do we have any -inf,inf reactions?
@@ -512,70 +526,80 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         // Get the translation reactions -
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentBiochemistryParserDelegate";
         Vector<VLCGPBPKModelComponent> control_vector = _model_component_table.get(Class.forName(class_name_key));
-        Iterator<VLCGPBPKModelComponent> control_iterator = control_vector.iterator();
-        while (control_iterator.hasNext()) {
 
-            // get the connection model -
-            VLCGPBPKBiochemistryReactionModel reaction_model = (VLCGPBPKBiochemistryReactionModel) control_iterator.next();
-            reaction_model.doExecute();
+        // check for null -
+        if (control_vector != null){
 
-            // get the reactants and products -
-            Iterator<VLCGPBPKSpeciesModel> reactant_iterator = ((Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR)).iterator();
-            while (reactant_iterator.hasNext()){
+          // Ok, we are ready to process the control vector -
+          Iterator<VLCGPBPKModelComponent> control_iterator = control_vector.iterator();
+          while (control_iterator.hasNext()) {
 
-                VLCGPBPKSpeciesModel model = reactant_iterator.next();
+              // get the connection model -
+              VLCGPBPKBiochemistryReactionModel reaction_model = (VLCGPBPKBiochemistryReactionModel) control_iterator.next();
+              reaction_model.doExecute();
 
-                // add this to the species collection?
-                _addSpeciesModelToSpeciesModelList(model);
-            }
+              // get the reactants and products -
+              Iterator<VLCGPBPKSpeciesModel> reactant_iterator = ((Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_REACTANT_VECTOR)).iterator();
+              while (reactant_iterator.hasNext()){
 
-            Iterator<VLCGPBPKSpeciesModel> product_iterator = ((Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR)).iterator();
-            while (product_iterator.hasNext()) {
+                  VLCGPBPKSpeciesModel model = reactant_iterator.next();
 
-                VLCGPBPKSpeciesModel model = product_iterator.next();
+                  // add this to the species collection?
+                  _addSpeciesModelToSpeciesModelList(model);
+              }
 
-                // add this to the species collection?
-                _addSpeciesModelToSpeciesModelList(model);
-            }
+              Iterator<VLCGPBPKSpeciesModel> product_iterator = ((Vector)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_PRODUCT_VECTOR)).iterator();
+              while (product_iterator.hasNext()) {
 
-            // grab the enzyme if we have it -
-            if (reaction_model.containsKey(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL)){
+                  VLCGPBPKSpeciesModel model = product_iterator.next();
 
-                // ok, we have a model - get it and add to collection -
-                VLCGPBPKSpeciesModel enzyme_model = (VLCGPBPKSpeciesModel)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL);
+                  // add this to the species collection?
+                  _addSpeciesModelToSpeciesModelList(model);
+              }
 
-                //System.out.println("Enzyme - "+enzyme_model);
+              // grab the enzyme if we have it -
+              if (reaction_model.containsKey(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL)){
 
-                // add -
-                _addSpeciesModelToSpeciesModelList(enzyme_model);
-            }
+                  // ok, we have a model - get it and add to collection -
+                  VLCGPBPKSpeciesModel enzyme_model = (VLCGPBPKSpeciesModel)reaction_model.getModelComponent(VLCGPBPKBiochemistryReactionModel.BIOCHEMISTRY_REACTION_ENZYME_MODEL);
+
+                  //System.out.println("Enzyme - "+enzyme_model);
+
+                  // add -
+                  _addSpeciesModelToSpeciesModelList(enzyme_model);
+              }
+          }
         }
 
         // We may have species that appear as actors in the control statements, that are *not* in the reactions
         String control_class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentBiochemistryControlParserDelegate";
         Vector<VLCGPBPKBiochemistryControlModel> biochemistry_control_vector = (Vector)_model_component_table.get(Class.forName(control_class_name_key));
-        Iterator<VLCGPBPKBiochemistryControlModel> biochemistry_control_iterator = biochemistry_control_vector.iterator();
-        while (biochemistry_control_iterator.hasNext()) {
 
-            // Get the model -
-            VLCGPBPKBiochemistryControlModel biochemistry_control_model = biochemistry_control_iterator.next();
+        // check for null -
+        if (biochemistry_control_vector != null) {
+          Iterator<VLCGPBPKBiochemistryControlModel> biochemistry_control_iterator = biochemistry_control_vector.iterator();
+          while (biochemistry_control_iterator.hasNext()) {
 
-            // Get data from the model -
-            String control_name = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME);
-            String control_actor = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
-            String control_target = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
-            String control_type = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
-            String control_compartment = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT);
+              // Get the model -
+              VLCGPBPKBiochemistryControlModel biochemistry_control_model = biochemistry_control_iterator.next();
 
-            // Create a species model -
-            VLCGPBPKSpeciesModel species_model = new VLCGPBPKSpeciesModel();
-            species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL,control_actor);
-            species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT,control_compartment);
+              // Get data from the model -
+              String control_name = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_NAME);
+              String control_actor = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_ACTOR);
+              String control_target = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TARGET);
+              String control_type = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_TYPE);
+              String control_compartment = (String)biochemistry_control_model.getModelComponent(VLCGPBPKBiochemistryControlModel.BIOCHEMISTRY_CONTROL_COMPARTMENT);
 
-            System.out.println("Control - "+species_model);
+              // Create a species model -
+              VLCGPBPKSpeciesModel species_model = new VLCGPBPKSpeciesModel();
+              species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL,control_actor);
+              species_model.setModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT,control_compartment);
 
-            // add -
-            _addSpeciesModelToSpeciesModelList(species_model);
+              System.out.println("Control - "+species_model);
+
+              // add -
+              _addSpeciesModelToSpeciesModelList(species_model);
+          }
         }
 
 
@@ -610,6 +634,12 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         // Get the translation reactions -
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentConnectionParserDelegate";
         Vector<VLCGPBPKModelComponent> control_vector = _model_component_table.get(Class.forName(class_name_key));
+
+        // check for null -
+        if (control_vector == null){
+          //return buffer.toString();
+        }
+
         Iterator<VLCGPBPKModelComponent> control_iterator = control_vector.iterator();
         int connection_index = 1;
         while (control_iterator.hasNext()) {
@@ -666,6 +696,12 @@ public class VLCGParseVarnerPBPKFlatFile implements VLCGInputHandler {
         // Get the translation reactions -
         String class_name_key = _package_name_parser_delegate + ".VLCGPBPKCompartmentConnectionParserDelegate";
         Vector<VLCGPBPKModelComponent> control_vector = _model_component_table.get(Class.forName(class_name_key));
+
+        // check for null -
+        if (control_vector == null){
+          //return buffer.toString();
+        }
+
         Iterator<VLCGPBPKModelComponent> control_iterator = control_vector.iterator();
         while (control_iterator.hasNext()) {
 

@@ -41,6 +41,7 @@ public class VLCGJuliaPBPKModelDelegate {
     private VLCGCopyrightFactory copyrightFactory = VLCGCopyrightFactory.getSharedInstance();
     private java.util.Date today = Calendar.getInstance().getTime();
     private SimpleDateFormat date_formatter = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");
+    private Boolean _added_line = false;
 
     private String _generateSpeciesAliasListForModelTree(VLCGPBPKModelTreeWrapper model_tree) throws Exception {
 
@@ -84,6 +85,11 @@ public class VLCGJuliaPBPKModelDelegate {
             else {
 
                 // write the line -
+                if (_added_line == false){
+                    buffer.append("\n");
+                    _added_line = true;
+                }
+
                 buffer.append(symbol);
                 buffer.append(" = ");
                 buffer.append("x[");
@@ -93,7 +99,6 @@ public class VLCGJuliaPBPKModelDelegate {
 
             // update the species index -
             species_index++;
-
             local_compartment_name = compartment_name;
         }
 
@@ -240,6 +245,105 @@ public class VLCGJuliaPBPKModelDelegate {
         }
 
         return buffer.toString();
+    }
+
+    public String buildDilutionFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
+      // Method variables -
+      StringBuilder buffer = new StringBuilder();
+
+      // Get the control function name -
+      String dilution_function_name = property_tree.lookupKwateeDilutionFunctionName();
+
+      // Copyright notice -
+      String copyright = copyrightFactory.getJuliaCopyrightHeader();
+      buffer.append(copyright);
+
+      // Fill in the buffer -
+      buffer.append("function ");
+      buffer.append(dilution_function_name);
+      buffer.append("(t,x,dvdt_vector,data_dictionary)\n");
+      buffer.append("# ---------------------------------------------------------------------- #\n");
+      buffer.append("# ");
+      buffer.append(dilution_function_name);
+      buffer.append(".jl was generated using the Kwatee code generation system.\n");
+      buffer.append("# Username: ");
+      buffer.append(property_tree.lookupKwateeModelUsername());
+      buffer.append("\n");
+      buffer.append("# Type: ");
+      buffer.append(property_tree.lookupKwateeModelType());
+      buffer.append("\n");
+      buffer.append("# Version: ");
+      buffer.append(property_tree.lookupKwateeModelVersion());
+      buffer.append("\n");
+      buffer.append("# Generation timestamp: ");
+      buffer.append(date_formatter.format(today));
+      buffer.append("\n");
+      buffer.append("# \n");
+      buffer.append("# Arguments: \n");
+      buffer.append("# t  - current time \n");
+      buffer.append("# x  - state vector \n");
+      buffer.append("# data_dictionary  - Data dictionary instance (holds model parameters) \n");
+      buffer.append("# ---------------------------------------------------------------------- #\n");
+      buffer.append("\n");
+
+      // Alias the species vector -
+      buffer.append("# Alias the species vector - \n");
+      buffer.append(_generateSpeciesAliasListForModelTree(model_tree));
+      buffer.append("\n");
+
+      // Write the dilution terms -
+      int number_of_biochmeical_species = model_tree.calculateTheNumberOfBiochemicalSpecies();
+      buffer.append("# Write the species dilution vector - \n");
+      buffer.append("species_dilution_array = Float64[];\n");
+
+      // Get list of species -
+      ArrayList<VLCGPBPKSpeciesModel> species_model_array = model_tree.getSpeciesModelsFromPBPKModelTree();
+
+      // get list of compartments -
+      ArrayList<VLCGPBPKCompartmentModel> compartment_model_list = model_tree.getCompartmentModelsFromPBPKModelTree();
+      for (VLCGPBPKCompartmentModel compartment_model : compartment_model_list) {
+
+        // Get the symbol for this compartment -
+        String local_compartment_symbol = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_SYMBOL);
+        String local_compartment_index = (String)compartment_model.getModelComponent(VLCGPBPKCompartmentModel.COMPARTMENT_INDEX);
+
+        // go trhough the species -
+        for (VLCGPBPKSpeciesModel species_model : species_model_array){
+
+          // ok, so we have the species model, get some data -
+          // Get data from the model -
+          String symbol = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SYMBOL);
+          String species_compartment_name = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_COMPARTMENT);
+          String species_type = (String)species_model.getModelComponent(VLCGPBPKSpeciesModel.SPECIES_SPECIES_TYPE);
+
+          if (species_type.equalsIgnoreCase("biochemical") == true && local_compartment_symbol.equalsIgnoreCase(species_compartment_name)){
+
+            // we have a biochemical species, in the correct compartment. Write the dilution record -
+            buffer.append("push!(species_dilution_array,");
+
+            // build local species symbol =
+            String local_species_symbol = symbol+"_"+species_compartment_name;
+            String local_volume_symbol = "volume_"+local_compartment_symbol;
+            String dVdt_term = "dvdt_vector["+local_compartment_index+"]";
+
+            // finish the record -
+            buffer.append("(");
+            buffer.append(local_species_symbol);
+            buffer.append("/");
+            buffer.append(local_volume_symbol);
+            buffer.append(")*");
+            buffer.append(dVdt_term);
+            buffer.append(");\n");
+          }
+        }
+      }
+
+      // write the return -
+      buffer.append("return (species_dilution_array);\n");
+      buffer.append("end;\n");
+
+      // return -
+      return buffer.toString();
     }
 
     public String buildHeartRateFunctionBuffer(VLCGPBPKModelTreeWrapper model_tree, VLCGTransformationPropertyTree property_tree) throws Exception {
@@ -647,6 +751,12 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append("include(\"");
         massbalances.append(flow_function_name);
         massbalances.append(".jl\");\n");
+
+        // Get/Set the flow function import -
+        String dilution_function_name = property_tree.lookupKwateeDilutionFunctionName();
+        massbalances.append("include(\"");
+        massbalances.append(dilution_function_name);
+        massbalances.append(".jl\");\n");
         massbalances.append("\n");
 
         // Copyright notice -
@@ -714,6 +824,14 @@ public class VLCGJuliaPBPKModelDelegate {
         massbalances.append("(t,x,data_dictionary);\n");
         massbalances.append("\n");
 
+        // Calculate the dvdt vector, and call the dilution function -
+        massbalances.append("# Call the dilution function - \n");
+        massbalances.append("tmp_dvdt_vector = C*q_vector;\n");
+        massbalances.append("(dilution_terms_vector) = ");
+        massbalances.append(dilution_function_name);
+        massbalances.append("(t,x,tmp_dvdt_vector,data_dictionary);\n");
+        massbalances.append("\n");
+
         // check - is this model large scale optimized?
         if (property_tree.isKwateeModelLargeScaleOptimized() == true){
 
@@ -724,14 +842,13 @@ public class VLCGJuliaPBPKModelDelegate {
 
             // balance are encoded as matrix vector product -
             massbalances.append("# Encode the biochemical balance equations as a matrix vector product - \n");
-            massbalances.append("tmp_vector = flow_terms_vector + S*rate_vector;\n");
+            massbalances.append("tmp_vector = flow_terms_vector + S*rate_vector - dilution_terms_vector;\n");
             massbalances.append("number_of_states = length(tmp_vector);\n");
             massbalances.append("for state_index in collect(1:number_of_states)\n");
             massbalances.append("\tdxdt_vector[state_index] = tau_array[state_index]*tmp_vector[state_index];\n");
             massbalances.append("end\n");
             massbalances.append("\n");
-            massbalances.append("# Encode the volume balance equations as a matrix vector product - \n");
-            massbalances.append("tmp_dvdt_vector = C*q_vector;\n");
+            massbalances.append("# Return the volume dvdt terms - \n");
             massbalances.append("number_of_compartments = length(tmp_dvdt_vector);\n");
             massbalances.append("for compartment_index in collect(1:number_of_compartments)\n");
             massbalances.append("\tstate_vector_index = (number_of_states)+compartment_index;\n");
