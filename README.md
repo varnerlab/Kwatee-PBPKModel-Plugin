@@ -1,13 +1,13 @@
 Introduction
 ----
 
-The Kwatee Physiologically Based Pharmacokinetic (PBPK) plugin generates enhanced PBPK models. 
+The Kwatee Physiologically Based Pharmacokinetic (PBPK) plugin generates enhanced PBPK models.
 
 Requirements
 ---
 
 * `Julia`: The PBPK model equations are generated in the [Julia](http://julialang.org) programming language.
-* `Sundials package`: The Kwatee PBPK plugin generates model equations which are solved using the [Sundials](https://github.com/JuliaLang/Sundials.jl/blob/master/README.md) package for [Julia](http://julialang.org). In the future, the PBPK plugin will also support the ODE package (which provides solvers similar to the ODE suite of Matlab). However, the current version generates only Sundials compatible model equations. 
+* `Sundials package`: The Kwatee PBPK plugin generates model equations which are solved using the [Sundials](https://github.com/JuliaLang/Sundials.jl/blob/master/README.md) package for [Julia](http://julialang.org). In the future, the PBPK plugin will also support the ODE package (which provides solvers similar to the ODE suite of Matlab). However, the current version generates only Sundials compatible model equations.
 
 How do I generate code?
 ---
@@ -85,7 +85,54 @@ II,fixed;
 ~~~
 
 
-__Job configuration files__:In addition to model specification files, to succesfully generate code you will need a job specification file by default given the filename `Configuration.xml` which defines paths and other data required by Kwatee. A typical job configuration file is:
+__Job configuration files__:In addition to model specification files, to succesfully generate code you will need a job specification file by default given the filename `Configuration.xml`. Job configuration files define paths and other data required by Kwatee. A typical job configuration file is:
+
+~~~
+<?xml version="1.0" encoding="UTF-8"?>
+<Model username="jeffreyvarner" model_version="1.0" model_type="PBPK-JULIA" large_scale_optimized="false" model_name="TEST_MODEL">
+  <Configuration>
+    <ListOfPackages>
+        <package required="YES" symbol="INPUT_HANDLER_PACKAGE" package_name="org.varnerlab.kwatee.pbpkmodel"></package>
+        <package required="YES" symbol="OUTPUT_HANDLER_PACKAGE" package_name="org.varnerlab.kwatee.pbpkmodel"></package>
+    </ListOfPackages>
+    <ListOfPaths>
+        <path required="YES" symbol="KWATEE_INPUT_PATH" path_location="/Users/jeffreyvarner/Desktop/julia_work/pbpk_model_example/"></path>
+        <path required="YES" symbol="KWATEE_SOURCE_OUTPUT_PATH" path_location="/Users/jeffreyvarner/Desktop/julia_work/pbpk_model_example/src/"></path>
+        <path required="YES" symbol="KWATEE_NETWORK_OUTPUT_PATH" path_location="/Users/jeffreyvarner/Desktop/julia_work/pbpk_model_example/network/"></path>
+        <path required="YES" symbol="KWATEE_DEBUG_OUTPUT_PATH" path_location="/Users/jeffreyvarner/Desktop/julia_work/pbpk_model_example/debug/"></path>
+        <path required="YES" symbol="KWATEE_SERVER_ROOT_DIRECTORY" path_location="/Users/jeffreyvarner/Desktop/KWATEEServer-v1.0/"></path>
+        <path required="YES" symbol="KWATEE_SERVER_JAR_DIRECTORY" path_location="/Users/jeffreyvarner/Desktop/KWATEEServer-v1.0/dist/"></path>
+        <path required="YES" symbol="KWATEE_PLUGINS_JAR_DIRECTORY" path_location="/Users/jeffreyvarner/Desktop/KWATEEServer-v1.0/plugins/"></path>
+    </ListOfPaths>
+  </Configuration>
+
+  <Handler>
+      <InputHandler required="YES" input_classname="VLCGParseVarnerPBPKFlatFile" package="INPUT_HANDLER_PACKAGE"></InputHandler>
+      <OutputHandler required="YES" output_classname="VLCGWriteJuliaPBPKModel" package="OUTPUT_HANDLER_PACKAGE"></OutputHandler>
+  </Handler>
+  <InputOptions>
+      <NetworkFile required="YES" path_symbol="KWATEE_INPUT_PATH" filename="Model.net"></NetworkFile>
+      <OrderFile required="NO" path_symbol="KWATEE_INPUT_PATH" filename="Order.dat"></OrderFile>
+      <ModelParameterFile required="NO" path_symbol="KWATEE_INPUT_PATH" filename="Parameters.dat"></ModelParameterFile>
+      <InitialConditionFile required="NO" path_symbol="KWATEE_INPUT_PATH" filename="InitialConditins.dat"></InitialConditionFile>
+  </InputOptions>
+  <OutputOptions>
+      <DataFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="DataFile.jl"></DataFunction>
+      <BalanceFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="MassBalances.jl"></BalanceFunction>
+      <KineticsFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="Kinetics.jl"></KineticsFunction>
+      <InputFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="Inputs.jl"></InputFunction>
+      <DriverFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="SolveBalances.jl"></DriverFunction>
+      <ControlFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="Control.jl"></ControlFunction>
+      <FlowFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="Flow.jl"></FlowFunction>
+      <DilutionFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="Dilution.jl"></DilutionFunction>
+      <HeartRateFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="HeartRate.jl"></HeartRateFunction>
+      <CardiacDistributionFunction required="YES" path_symbol="KWATEE_SOURCE_OUTPUT_PATH" filename="CardiacDistribution.jl"></CardiacDistributionFunction>
+      <CompartmentConnectivityMatrix required="YES" path_symbol="KWATEE_NETWORK_OUTPUT_PATH" filename="Connectivity.dat"></CompartmentConnectivityMatrix>
+      <StoichiometricMatrix required="YES" path_symbol="KWATEE_NETWORK_OUTPUT_PATH" filename="Network.dat"></StoichiometricMatrix>
+      <DebugOutputFile required="YES" path_symbol="KWATEE_DEDUG_OUTPUT_PATH" filename="Debug.txt"></DebugOutputFile>
+  </OutputOptions>
+</Model>
+~~~
 
 The majority of the fields in the job configuration file can stay at the default values. However, you will need to specify your path structure (where Kwatee can find your files, where you want your generated code to reside, and where to find the server). Thus, you should edit the paths in the `<listOfPaths>...</listOfPaths>` section of the configuration file with your values. There typically only a few paths that must be specified:
 
@@ -96,5 +143,3 @@ The majority of the fields in the job configuration file can stay at the default
 * `KWATEE_SERVER_ROOT_DIRECTORY`: Directory where your Kwatee server is installed.
 * `KWATEE_SERVER_JAR_DIRECTORY`: Subdirectory where the Kwatee server jar file can be found (default is `dist`).
 * `KWATEE_PLUGINS_JAR_DIRECTORY`: Subdirectory where Kwatee can find your plugin jars (default is `plugins`).
-
-
